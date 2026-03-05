@@ -21,7 +21,7 @@ const AGENT_CONFIG = {
   agentName: "locus",
   productName: "LOCUS",
   tagline: "Where decisions meet intelligence",
-  company: "AJx",
+  company: "Intsemble",
   totalStages: 7,
 };
 
@@ -77,7 +77,7 @@ Provide your **business idea** and **geographic region clearly** and I will anal
       <main className="min-h-screen relative z-10">
         {/* Dimensions, padding, width: UNCHANGED */}
         <div className="max-w-5xl mx-auto p-10 glass">
-          
+
           {/* ================= HEADER ================= */}
           <header className="mb-10 space-y-3">
             {/* Product name style intentionally UNCHANGED */}
@@ -136,11 +136,11 @@ Provide your **business idea** and **geographic region clearly** and I will anal
 
               {(state.html_report_content ||
                 state.infographic_base64) && (
-                <ArtifactViewer
-                  htmlReport={state.html_report_content}
-                  infographic={state.infographic_base64}
-                />
-              )}
+                  <ArtifactViewer
+                    htmlReport={state.html_report_content}
+                    infographic={state.infographic_base64}
+                  />
+                )}
             </div>
           )}
 

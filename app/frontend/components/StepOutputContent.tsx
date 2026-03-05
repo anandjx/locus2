@@ -6,6 +6,7 @@ import {
 } from "@/lib/summaryHelpers";
 import { ScrollableMarkdown } from "./ScrollableMarkdown";
 import { TabbedGapAnalysis } from "./TabbedGapAnalysis";
+import { LocationReport } from "./LocationReport";
 
 interface StepOutputContentProps {
   stepId: string;
@@ -64,24 +65,7 @@ export function StepOutputContent({ stepId, state }: StepOutputContentProps) {
       if (!state.strategic_report) {
         return <p className="text-gray-500 text-sm italic">Synthesizing strategy...</p>;
       }
-      const rec = state.strategic_report.top_recommendation;
-      return (
-        <div className="space-y-2">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-gray-900">{rec.location_name}</span>
-            <span className={`px-2 py-0.5 rounded text-sm font-medium ${
-              rec.overall_score >= 75 ? "bg-green-100 text-green-800" :
-              rec.overall_score >= 50 ? "bg-yellow-100 text-yellow-800" :
-              "bg-red-100 text-red-800"
-            }`}>
-              Score: {rec.overall_score}
-            </span>
-          </div>
-          <p className="text-sm text-blue-700">
-            "{rec.opportunity_type}" opportunity
-          </p>
-        </div>
-      );
+      return <LocationReport report={state.strategic_report} />;
 
     case "report_generation":
       if (!state.html_report_content) {

@@ -181,6 +181,12 @@ def after_gap_analysis(callback_context: CallbackContext) -> Optional[types.Cont
     else:
         logger.info("  No Python code blocks found to extract")
 
+    # Extract execution result and append to gap analysis text if available
+    exec_output = _extract_execution_result_from_invocation(callback_context)
+    if exec_output and exec_output not in gap:
+        callback_context.state["gap_analysis"] = gap + "\n\n### Code Execution Results\n" + exec_output
+        logger.info(f"  Appended execution output to gap analysis: {len(exec_output)} chars")
+
     stages = callback_context.state.get("stages_completed", [])
     stages.append("gap_analysis")
     callback_context.state["stages_completed"] = stages
@@ -237,6 +243,39 @@ def _extract_code_from_invocation(callback_context: CallbackContext) -> str:
         logger.debug(traceback.format_exc())
 
     return "\n\n# --- Next Code Block ---\n\n".join(code_blocks)
+
+
+def _extract_execution_result_from_invocation(callback_context: CallbackContext) -> str:
+    """Extract Python execution result text from invocation context session events."""
+    results = []
+
+    try:
+        invocation = getattr(callback_context, '_invocation_context', None) or \
+                     getattr(callback_context, 'invocation_context', None)
+        if not invocation: return ""
+        
+        session = getattr(invocation, 'session', None)
+        if not session: return ""
+        
+        events = getattr(session, 'events', None) or []
+
+        for event in events:
+            content = getattr(event, 'content', None)
+            if not content: continue
+            
+            parts = getattr(content, 'parts', None) or []
+            for part in parts:
+                exec_result = getattr(part, 'code_execution_result', None)
+                if exec_result:
+                    output = getattr(exec_result, 'output', None)
+                    if output and output.strip():
+                        results.append(output.strip())
+                        logger.debug(f"Found code_execution_result output: {len(output)} chars")
+                        
+    except Exception as e:
+        logger.warning(f"Error extracting execution result from invocation: {e}")
+
+    return "\n\n".join(results)
 
 
 def _extract_python_code_from_content(content: str) -> str:
