@@ -14,16 +14,12 @@ import { StaticMapCard } from "@/components/StaticMapCard";
 
 import type { AgentState } from "@/lib/types";
 
-/* ======================================================
-   Reusable Agent Configuration (unchanged)
-====================================================== */
 const AGENT_CONFIG = {
-  // agentName: "locus", {/*name when running locally */}
   agentName: "locus",
   productName: "LOCUS",
   tagline: "Where decisions meet intelligence",
   company: "Intsemble",
-  totalStages: 7,
+  totalStages: 6,
 };
 
 export default function Home() {
@@ -35,15 +31,11 @@ export default function Home() {
     name: AGENT_CONFIG.agentName,
     render: ({ state }) => {
       if (!state || !state.pipeline_stage) return null;
-
       return (
         <div className="glass px-4 py-2">
-          {/* Soft neutral text instead of bright white → calmer, premium */}
-          <span className="text-sm text-slate-600">
+          <span className="text-sm text-white/70">
             Agent processing:{" "}
-            <span className="text-slate-900 font-medium">
-              {state.pipeline_stage}
-            </span>
+            <span className="text-white">{state.pipeline_stage}</span>
           </span>
         </div>
       );
@@ -51,10 +43,18 @@ export default function Home() {
   });
 
   const isProcessing = !!state?.pipeline_stage && !state?.strategic_report;
+  const pipelineStarted = !!state?.target_location || !!state?.pipeline_stage;
+  const rec = state?.strategic_report?.top_recommendation;
+  const coords = rec?.competition?.competitor_coordinates;
+
+  /* Progressive data availability checks */
+  const hasMarket = !!rec?.market;
+  const hasCompetitor = !!rec?.competition;
+  const hasReport = !!state?.strategic_report;
+  const hasAlternatives = (state?.strategic_report?.alternative_locations?.length ?? 0) > 0;
 
   return (
     <div className="transition-opacity duration-300 min-h-screen">
-      {/* CSS Block to disable CopilotKit chat box specifically to prevent 429 errors without freezing the UI */}
       {isProcessing && (
         <style dangerouslySetInnerHTML={{
           __html: `
@@ -86,94 +86,122 @@ Provide your **business idea** and **geographic region clearly** and I will anal
 `,
         }}
       >
-        {/* Removed particles visually (class can stay if globals.css changed) */}
         <main className="min-h-screen relative z-10">
-          {/* Dimensions, padding, width: UNCHANGED */}
-          <div className="max-w-5xl mx-auto p-10 glass">
+          <div className="max-w-[1440px] mx-auto px-5 py-6 lg:px-8">
 
-            {/* ================= HEADER ================= */}
-            <header className="mb-10 space-y-3">
-              {/* Product name style intentionally UNCHANGED */}
-              <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
-                {AGENT_CONFIG.productName}
-              </h1>
-
-              {/* Switched to slate tones → aligns with white Copilot panel */}
-              <p className="text-slate-600 text-lg">
-                {AGENT_CONFIG.tagline}
-                <span className="mx-2 text-slate-300">|</span>
-                A product by{" "}
-                <span className="font-medium text-slate-600">
-                  {AGENT_CONFIG.company}
-                </span>
-              </p>
-
-              {/* AgentStatus already glass → fits naturally */}
-              <AgentStatus stage={state?.pipeline_stage} />
+            {/* ===== HEADER — Original glassmorphic style ===== */}
+            <header className="mb-8 animate-fade-in">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
+                    {AGENT_CONFIG.productName}
+                  </h1>
+                  <p className="text-slate-600 text-lg">
+                    {AGENT_CONFIG.tagline}
+                    <span className="mx-2 text-slate-300">|</span>
+                    A product by{" "}
+                    <span className="font-medium text-slate-600">
+                      {AGENT_CONFIG.company}
+                    </span>
+                  </p>
+                </div>
+                <AgentStatus stage={state?.pipeline_stage} />
+              </div>
             </header>
 
-            {/* ================= PIPELINE ================= */}
-            {(state?.target_location || state?.pipeline_stage) && (
-              <div className="mb-10">
-                <PipelineTimeline
-                  state={state}
-                  currentStage={state.pipeline_stage}
-                  completedStages={state.stages_completed || []}
-                />
-              </div>
-            )}
-
-            {/* ================= RESULTS ================= */}
-            {state?.strategic_report && (
-              <div className="space-y-8">
-                <LocationReport report={state.strategic_report} />
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  {state.strategic_report.top_recommendation?.competition && (
-                    <CompetitorCard
-                      competition={state.strategic_report.top_recommendation.competition}
-                    />
-                  )}
-                  {state.strategic_report.top_recommendation?.market && (
-                    <MarketCard
-                      market={state.strategic_report.top_recommendation.market}
-                    />
-                  )}
-                  {state.strategic_report.top_recommendation?.competition?.competitor_coordinates && state.strategic_report.top_recommendation.competition.competitor_coordinates.length > 0 && (
-                    <div className="md:col-span-2">
-                      <StaticMapCard
-                        coordinates={state.strategic_report.top_recommendation.competition.competitor_coordinates}
-                      />
-                    </div>
-                  )}
+            {/* ===== ACTIVE PIPELINE — shown as soon as target_location is set ===== */}
+            {pipelineStarted && (
+              <>
+                {/* Pipeline Timeline */}
+                <div className="mb-6 animate-slide-up">
+                  <PipelineTimeline
+                    state={state}
+                    currentStage={state.pipeline_stage}
+                    completedStages={state.stages_completed || []}
+                  />
                 </div>
 
-                {state.strategic_report.alternative_locations?.length > 0 && (
-                  <AlternativeLocations
-                    locations={state.strategic_report.alternative_locations}
-                  />
+                {/* ── Two-Column Dashboard: Market (63%) | Competitor (37%) ── */}
+                {/* Shows immediately — cards appear progressively as data arrives */}
+                <div className="grid grid-cols-1 lg:grid-cols-[63%_1fr] gap-6 mb-6">
+                  {/* Left Column — Market Intelligence */}
+                  <div className="space-y-6">
+                    {hasMarket ? (
+                      <MarketCard market={rec!.market} />
+                    ) : (
+                      <SkeletonCard
+                        icon="📈"
+                        title="Market Intelligence"
+                        accent="teal"
+                        message={
+                          state?.stages_completed?.includes("gap_analysis")
+                            ? "Synthesizing market data..."
+                            : state?.stages_completed?.includes("market_research")
+                              ? "Market research complete — awaiting analysis..."
+                              : "Collecting market data..."
+                        }
+                      />
+                    )}
+                  </div>
+
+                  {/* Right Column — Competitor Profile */}
+                  <div className="space-y-6">
+                    {hasCompetitor ? (
+                      <CompetitorCard competition={rec!.competition} />
+                    ) : (
+                      <SkeletonCard
+                        icon="⚔️"
+                        title="Competition Profile"
+                        accent="coral"
+                        message={
+                          state?.stages_completed?.includes("competitor_mapping")
+                            ? "Competitor data collected — awaiting synthesis..."
+                            : "Mapping competitors..."
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* ── Map — separate full-width card ── */}
+                {coords && coords.length > 0 && (
+                  <div className="mb-6 animate-fade-in delay-1">
+                    <StaticMapCard coordinates={coords} />
+                  </div>
                 )}
 
-                {(state.html_report_content ||
-                  state.infographic_base64) && (
-                    <ArtifactViewer
-                      htmlReport={state.html_report_content}
-                      infographic={state.infographic_base64}
+                {/* ── Hero Report — shows after strategy synthesis ── */}
+                {hasReport && (
+                  <div className="mb-6 animate-slide-up delay-1">
+                    <LocationReport report={state.strategic_report!} />
+                  </div>
+                )}
+
+                {/* ── Alternative Locations ── */}
+                {hasAlternatives && (
+                  <div className="mb-6 animate-fade-in delay-2">
+                    <AlternativeLocations
+                      locations={state.strategic_report!.alternative_locations}
                     />
-                  )}
-              </div>
+                  </div>
+                )}
+
+                {/* ── HTML Report Viewer ── */}
+                {state.html_report_content && (
+                  <div className="mb-6 animate-fade-in delay-3">
+                    <ArtifactViewer htmlReport={state.html_report_content} />
+                  </div>
+                )}
+              </>
             )}
 
-            {/* ================= WELCOME STATE ================= */}
-            {!state?.target_location && (
-              <div className="glass p-14 text-center mt-12">
-                {/* Emoji retained – friendly, human */}
+            {/* ===== WELCOME STATE — shown when no pipeline is active ===== */}
+            {!pipelineStarted && (
+              <div className="glass p-14 text-center mt-12 animate-fade-in">
                 <div className="text-7xl mb-6">🌍</div>
-
                 <h2 className="text-3xl font-semibold text-slate-500 mb-4">
                   Discover the Optimal Location for your Business
                 </h2>
-
                 <p className="text-slate-700 max-w-xl mx-auto mb-10 text-lg leading-relaxed text-center">
                   Enter your business idea and city in the chat to receive
                   AI-driven market research, competitor analysis and
@@ -184,31 +212,10 @@ Provide your **business idea** and **geographic region clearly** and I will anal
                   </span>
                 </p>
 
-
-                {/* Editorial body copy tone
-              <p className="text-slate-700 max-w-xl mx-auto mb-10 text-lg leading-relaxed">
-                Enter your business idea and city in the chat to receive
-                AI-driven market research, competitor analysis and
-                strategic recommendations.
-                <strong>To begin, click the 💬 chat bubble in the lower-right corner of your screen.</strong>
-              </p> */}
-
                 <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-                  <FeatureCard
-                    icon="🔍"
-                    title="Market Research"
-                    description="Live analysis of demand and demographics"
-                  />
-                  <FeatureCard
-                    icon="📍"
-                    title="Competitor Mapping"
-                    description="Real-world competitor intelligence"
-                  />
-                  <FeatureCard
-                    icon="🧠"
-                    title="AI Strategy"
-                    description="Deep reasoning and decision synthesis"
-                  />
+                  <FeatureCard icon="🔍" title="Market Research" description="Live analysis of demand and demographics" />
+                  <FeatureCard icon="📍" title="Competitor Mapping" description="Real-world competitor intelligence" />
+                  <FeatureCard icon="🧠" title="AI Strategy" description="Deep reasoning and decision synthesis" />
                 </div>
               </div>
             )}
@@ -219,32 +226,36 @@ Provide your **business idea** and **geographic region clearly** and I will anal
   );
 }
 
-/* ================= FEATURE CARD =================
-   Light editorial tone, same spacing, no layout change
-================================================== */
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: string;
-  title: string;
-  description: string;
+/* ── Skeleton placeholder card shown while data loads ── */
+function SkeletonCard({ icon, title, accent, message }: {
+  icon: string; title: string; accent: string; message: string;
 }) {
+  const accentClass = accent === "teal" ? "card-teal" : "card-coral";
   return (
-    <div className="glass p-5 text-left transition-all hover:-translate-y-1">
-      <div className="text-2xl mb-2">{icon}</div>
-
-      {/* Dark text on light glass → premium SaaS feel */}
-      <h3 className="font-medium text-slate-900 mb-1">
-        {title}
-      </h3>
-
-      <p className="text-sm text-slate-600 leading-relaxed">
-        {description}
+    <div className={`card ${accentClass} animate-fade-in`}>
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-lg">{icon}</span>
+        <h3 className="font-bold text-slate-900">{title}</h3>
+      </div>
+      <div className="space-y-3">
+        <div className="h-3 bg-slate-200/60 rounded-full w-3/4 animate-pulse" />
+        <div className="h-3 bg-slate-200/40 rounded-full w-1/2 animate-pulse delay-1" />
+        <div className="h-3 bg-slate-200/30 rounded-full w-2/3 animate-pulse delay-2" />
+      </div>
+      <p className="text-xs text-slate-400 mt-4 flex items-center gap-1.5">
+        <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />
+        {message}
       </p>
     </div>
   );
 }
 
-
+function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+  return (
+    <div className="glass p-5 text-left transition-all hover:-translate-y-1">
+      <div className="text-2xl mb-2">{icon}</div>
+      <h3 className="font-medium text-slate-900 mb-1">{title}</h3>
+      <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
+    </div>
+  );
+}

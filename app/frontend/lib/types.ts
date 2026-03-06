@@ -131,8 +131,7 @@ export type PipelineStage =
   | "competitor_mapping"
   | "gap_analysis"
   | "strategy_synthesis"
-  | "report_generation"
-  | "infographic_generation";
+  | "report_generation";
 
 /**
  * Complete agent state type for useCoAgent hook.
@@ -160,7 +159,6 @@ export interface AgentState {
 
   // Artifact content (set by tools for AG-UI frontend display)
   html_report_content?: string;
-  infographic_base64?: string;
 
   // Metadata
   current_date?: string;

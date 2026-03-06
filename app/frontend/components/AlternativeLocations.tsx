@@ -4,77 +4,68 @@ interface AlternativeLocationsProps {
   locations: AlternativeLocation[];
 }
 
-/**
- * AlternativeLocations displays the alternative location options
- * from the analysis report.
- */
 export function AlternativeLocations({ locations }: AlternativeLocationsProps) {
   if (!locations || locations.length === 0) return null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-5">
-      <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-        <span className="text-xl">🗺️</span>
-        Alternative Locations
-      </h3>
+    <div className="card card-chiffon overflow-hidden animate-fade-in delay-2">
+      <div className="flex items-center justify-between mb-5">
+        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+          <span className="text-lg">🗺️</span> Alternative Locations
+        </h3>
+        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-amber-50 text-amber-700 border-amber-200">
+          {locations.length} Options
+        </span>
+      </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {locations.map((loc, i) => (
-          <div
-            key={i}
-            className="p-4 bg-gray-50 rounded-lg border hover:border-blue-200 hover:shadow-sm transition-all"
-          >
-            {/* Header */}
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h4 className="font-medium text-gray-900">{loc.location_name}</h4>
-                <p className="text-sm text-gray-500">{loc.area}</p>
+        {locations.map((loc, i) => {
+          const scoreBg =
+            loc.overall_score >= 75 ? "from-emerald-500 to-green-600"
+              : loc.overall_score >= 50 ? "from-amber-500 to-orange-500"
+                : "from-slate-400 to-slate-500";
+
+          return (
+            <div
+              key={i}
+              className="p-3.5 bg-gradient-to-br from-amber-50/40 to-white rounded-2xl border border-amber-100/50 hover:border-amber-200 hover:shadow-md transition-all duration-200"
+            >
+              <div className="flex justify-between items-start mb-2.5">
+                <div className="min-w-0">
+                  <h4 className="font-semibold text-slate-900 text-xs truncate">{loc.location_name}</h4>
+                  <p className="text-[10px] text-slate-500 truncate">{loc.area}</p>
+                </div>
+                <div className={`w-10 h-10 rounded-xl flex flex-col items-center justify-center text-white bg-gradient-to-br ${scoreBg} shadow-sm flex-shrink-0 ml-2`}>
+                  <span className="text-xs font-bold leading-none">{loc.overall_score}</span>
+                  <span className="text-[7px] opacity-70">/100</span>
+                </div>
               </div>
-              <div
-                className={`w-12 h-12 rounded-lg flex flex-col items-center justify-center text-white ${
-                  loc.overall_score >= 75
-                    ? "bg-green-500"
-                    : loc.overall_score >= 50
-                    ? "bg-yellow-500"
-                    : "bg-gray-400"
-                }`}
-              >
-                <span className="font-bold">{loc.overall_score}</span>
-                <span className="text-xs opacity-80">/100</span>
+
+              <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[9px] font-bold mb-2 border border-amber-100">
+                {loc.opportunity_type}
+              </span>
+
+              <div className="space-y-1.5 mb-2">
+                <div>
+                  <div className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Strength</div>
+                  <div className="text-[10px] text-emerald-700 flex items-start gap-1">
+                    <span className="flex-shrink-0">✅</span><span>{loc.key_strength}</span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">Concern</div>
+                  <div className="text-[10px] text-amber-700 flex items-start gap-1">
+                    <span className="flex-shrink-0">⚠️</span><span>{loc.key_concern}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-amber-100/50">
+                <p className="text-[9px] text-slate-400 italic leading-relaxed">{loc.why_not_top}</p>
               </div>
             </div>
-
-            {/* Type badge */}
-            <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-medium mb-3">
-              {loc.opportunity_type}
-            </span>
-
-            {/* Strength */}
-            <div className="mb-2">
-              <div className="text-xs text-gray-500 mb-1">Key Strength</div>
-              <div className="text-sm text-green-700 flex items-start gap-1">
-                <span>✅</span>
-                {loc.key_strength}
-              </div>
-            </div>
-
-            {/* Concern */}
-            <div className="mb-3">
-              <div className="text-xs text-gray-500 mb-1">Key Concern</div>
-              <div className="text-sm text-orange-700 flex items-start gap-1">
-                <span>⚠️</span>
-                {loc.key_concern}
-              </div>
-            </div>
-
-            {/* Why not top */}
-            <div className="pt-3 border-t border-gray-200">
-              <div className="text-xs text-gray-500 italic">
-                {loc.why_not_top}
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
