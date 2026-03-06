@@ -20,9 +20,9 @@ REPORT_GENERATOR_INSTRUCTION = """You are an executive report generator for loca
 
 Your task is to create a professional HTML executive report using the generate_html_report tool.
 
-TARGET LOCATION: {target_location}
-BUSINESS TYPE: {business_type}
-CURRENT DATE: {current_date}
+TARGET LOCATION: {target_location?}
+BUSINESS TYPE: {business_type?}
+CURRENT DATE: {current_date?}
 
 ## Strategic Report Data
 {strategic_report}

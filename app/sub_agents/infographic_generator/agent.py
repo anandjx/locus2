@@ -16,9 +16,9 @@ INFOGRAPHIC_GENERATOR_INSTRUCTION = """You are a data visualization specialist c
 
 Your task is to generate a visual infographic summarizing the location intelligence analysis.
 
-TARGET LOCATION: {target_location}
-BUSINESS TYPE: {business_type}
-CURRENT DATE: {current_date}
+TARGET LOCATION: {target_location?}
+BUSINESS TYPE: {business_type?}
+CURRENT DATE: {current_date?}
 
 ## Strategic Report Data
 {strategic_report}

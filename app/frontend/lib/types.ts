@@ -39,18 +39,34 @@ export interface CompetitionProfile {
   chain_dominance_pct: number;
   avg_competitor_rating: number;
   high_performers_count: number;
+  concentration_index_cci: number;
+  req_daily_customers: number;
+  feasibility_note: string;
+  competitor_coordinates: string[];
 }
 
-/**
- * Market fundamentals for the zone.
- * Matches: MarketCharacteristics Pydantic model
- */
+// /**
+//  * Market fundamentals for the zone.
+//  * Matches: MarketCharacteristics Pydantic model
+//  */
+// export interface MarketCharacteristics {
+//   population_density: string; // "Low" | "Medium" | "High"
+//   income_level: string; // "Low" | "Medium" | "High"
+//   infrastructure_access: string;
+//   foot_traffic_pattern: string;
+//   rental_cost_tier: string; // "Low" | "Medium" | "High"
+// }
+
 export interface MarketCharacteristics {
-  population_density: string; // "Low" | "Medium" | "High"
-  income_level: string; // "Low" | "Medium" | "High"
+  population_density: string;
+  income_level: string;
   infrastructure_access: string;
   foot_traffic_pattern: string;
-  rental_cost_tier: string; // "Low" | "Medium" | "High"
+  estimated_rent_tier: string;
+  // --- NEW SOTA METRICS ---
+  latent_demand_ldi: number;
+  observed_demand_odi: number;
+  conversion_gap: number;
 }
 
 /**
@@ -217,3 +233,4 @@ export interface CollapsibleStepProps {
   isExpanded: boolean;
   onToggle: () => void;
 }
+

@@ -10,6 +10,7 @@ import { MarketCard } from "@/components/MarketCard";
 import { AlternativeLocations } from "@/components/AlternativeLocations";
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { AgentStatus } from "@/components/AgentStatus";
+import { StaticMapCard } from "@/components/StaticMapCard";
 
 import type { AgentState } from "@/lib/types";
 
@@ -49,13 +50,25 @@ export default function Home() {
     },
   });
 
+  const isProcessing = !!state?.pipeline_stage && !state?.strategic_report;
+
   return (
-    <CopilotSidebar
-      defaultOpen={false}
-      clickOutsideToClose={true}
-      labels={{
-        title: AGENT_CONFIG.productName,
-        initial: `Welcome to **${AGENT_CONFIG.productName}**.
+    <div className="transition-opacity duration-300 min-h-screen">
+      {/* CSS Block to disable CopilotKit chat box specifically to prevent 429 errors without freezing the UI */}
+      {isProcessing && (
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .copilotKitInput, [data-copilotkit-chat-input] { pointer-events: none !important; opacity: 0.6 !important; }
+            .copilotKitButton { pointer-events: none !important; opacity: 0.6 !important; }
+          `
+        }} />
+      )}
+      <CopilotSidebar
+        defaultOpen={false}
+        clickOutsideToClose={true}
+        labels={{
+          title: AGENT_CONFIG.productName,
+          initial: `Welcome to **${AGENT_CONFIG.productName}**.
 
 I am your AI-powered location intelligence system.
 
@@ -71,101 +84,108 @@ Provide your **business idea** and **geographic region clearly** and I will anal
 
 ⚠️ **IMPORTANT**: Once your query is confirmed, you can **close this sidebar** using the **X** button (top-right) to instantly view the **full-screen interactive report** updating live
 `,
-      }}
-    >
-      {/* Removed particles visually (class can stay if globals.css changed) */}
-      <main className="min-h-screen relative z-10">
-        {/* Dimensions, padding, width: UNCHANGED */}
-        <div className="max-w-5xl mx-auto p-10 glass">
+        }}
+      >
+        {/* Removed particles visually (class can stay if globals.css changed) */}
+        <main className="min-h-screen relative z-10">
+          {/* Dimensions, padding, width: UNCHANGED */}
+          <div className="max-w-5xl mx-auto p-10 glass">
 
-          {/* ================= HEADER ================= */}
-          <header className="mb-10 space-y-3">
-            {/* Product name style intentionally UNCHANGED */}
-            <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
-              {AGENT_CONFIG.productName}
-            </h1>
+            {/* ================= HEADER ================= */}
+            <header className="mb-10 space-y-3">
+              {/* Product name style intentionally UNCHANGED */}
+              <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
+                {AGENT_CONFIG.productName}
+              </h1>
 
-            {/* Switched to slate tones → aligns with white Copilot panel */}
-            <p className="text-slate-600 text-lg">
-              {AGENT_CONFIG.tagline}
-              <span className="mx-2 text-slate-300">|</span>
-              A product by{" "}
-              <span className="font-medium text-slate-600">
-                {AGENT_CONFIG.company}
-              </span>
-            </p>
-
-            {/* AgentStatus already glass → fits naturally */}
-            <AgentStatus stage={state?.pipeline_stage} />
-          </header>
-
-          {/* ================= PIPELINE ================= */}
-          {(state?.target_location || state?.pipeline_stage) && (
-            <div className="mb-10">
-              <PipelineTimeline
-                state={state}
-                currentStage={state.pipeline_stage}
-                completedStages={state.stages_completed || []}
-              />
-            </div>
-          )}
-
-          {/* ================= RESULTS ================= */}
-          {state?.strategic_report && (
-            <div className="space-y-8">
-              <LocationReport report={state.strategic_report} />
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <CompetitorCard
-                  competition={
-                    state.strategic_report.top_recommendation.competition
-                  }
-                />
-                <MarketCard
-                  market={
-                    state.strategic_report.top_recommendation.market
-                  }
-                />
-              </div>
-
-              {state.strategic_report.alternative_locations?.length > 0 && (
-                <AlternativeLocations
-                  locations={state.strategic_report.alternative_locations}
-                />
-              )}
-
-              {(state.html_report_content ||
-                state.infographic_base64) && (
-                  <ArtifactViewer
-                    htmlReport={state.html_report_content}
-                    infographic={state.infographic_base64}
-                  />
-                )}
-            </div>
-          )}
-
-          {/* ================= WELCOME STATE ================= */}
-          {!state?.target_location && (
-            <div className="glass p-14 text-center mt-12">
-              {/* Emoji retained – friendly, human */}
-              <div className="text-7xl mb-6">🌍</div>
-
-              <h2 className="text-3xl font-semibold text-slate-500 mb-4">
-                Discover the Optimal Location for your Business
-              </h2>
-
-              <p className="text-slate-700 max-w-xl mx-auto mb-10 text-lg leading-relaxed text-center">
-                Enter your business idea and city in the chat to receive
-                AI-driven market research, competitor analysis and
-                strategic recommendations.
-                <br />
-                <span className="mt-2 inline-block text-slate-500 text-base">
-                  To begin, click the <span className="font-medium text-slate-700">💬 chat bubble</span> in the lower-right corner.
+              {/* Switched to slate tones → aligns with white Copilot panel */}
+              <p className="text-slate-600 text-lg">
+                {AGENT_CONFIG.tagline}
+                <span className="mx-2 text-slate-300">|</span>
+                A product by{" "}
+                <span className="font-medium text-slate-600">
+                  {AGENT_CONFIG.company}
                 </span>
               </p>
 
+              {/* AgentStatus already glass → fits naturally */}
+              <AgentStatus stage={state?.pipeline_stage} />
+            </header>
 
-              {/* Editorial body copy tone
+            {/* ================= PIPELINE ================= */}
+            {(state?.target_location || state?.pipeline_stage) && (
+              <div className="mb-10">
+                <PipelineTimeline
+                  state={state}
+                  currentStage={state.pipeline_stage}
+                  completedStages={state.stages_completed || []}
+                />
+              </div>
+            )}
+
+            {/* ================= RESULTS ================= */}
+            {state?.strategic_report && (
+              <div className="space-y-8">
+                <LocationReport report={state.strategic_report} />
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {state.strategic_report.top_recommendation?.competition && (
+                    <CompetitorCard
+                      competition={state.strategic_report.top_recommendation.competition}
+                    />
+                  )}
+                  {state.strategic_report.top_recommendation?.market && (
+                    <MarketCard
+                      market={state.strategic_report.top_recommendation.market}
+                    />
+                  )}
+                  {state.strategic_report.top_recommendation?.competition?.competitor_coordinates && state.strategic_report.top_recommendation.competition.competitor_coordinates.length > 0 && (
+                    <div className="md:col-span-2">
+                      <StaticMapCard
+                        coordinates={state.strategic_report.top_recommendation.competition.competitor_coordinates}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {state.strategic_report.alternative_locations?.length > 0 && (
+                  <AlternativeLocations
+                    locations={state.strategic_report.alternative_locations}
+                  />
+                )}
+
+                {(state.html_report_content ||
+                  state.infographic_base64) && (
+                    <ArtifactViewer
+                      htmlReport={state.html_report_content}
+                      infographic={state.infographic_base64}
+                    />
+                  )}
+              </div>
+            )}
+
+            {/* ================= WELCOME STATE ================= */}
+            {!state?.target_location && (
+              <div className="glass p-14 text-center mt-12">
+                {/* Emoji retained – friendly, human */}
+                <div className="text-7xl mb-6">🌍</div>
+
+                <h2 className="text-3xl font-semibold text-slate-500 mb-4">
+                  Discover the Optimal Location for your Business
+                </h2>
+
+                <p className="text-slate-700 max-w-xl mx-auto mb-10 text-lg leading-relaxed text-center">
+                  Enter your business idea and city in the chat to receive
+                  AI-driven market research, competitor analysis and
+                  strategic recommendations.
+                  <br />
+                  <span className="mt-2 inline-block text-slate-500 text-base">
+                    To begin, click the <span className="font-medium text-slate-700">💬 chat bubble</span> in the lower-right corner.
+                  </span>
+                </p>
+
+
+                {/* Editorial body copy tone
               <p className="text-slate-700 max-w-xl mx-auto mb-10 text-lg leading-relaxed">
                 Enter your business idea and city in the chat to receive
                 AI-driven market research, competitor analysis and
@@ -173,28 +193,29 @@ Provide your **business idea** and **geographic region clearly** and I will anal
                 <strong>To begin, click the 💬 chat bubble in the lower-right corner of your screen.</strong>
               </p> */}
 
-              <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
-                <FeatureCard
-                  icon="🔍"
-                  title="Market Research"
-                  description="Live analysis of demand and demographics"
-                />
-                <FeatureCard
-                  icon="📍"
-                  title="Competitor Mapping"
-                  description="Real-world competitor intelligence"
-                />
-                <FeatureCard
-                  icon="🧠"
-                  title="AI Strategy"
-                  description="Deep reasoning and decision synthesis"
-                />
+                <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+                  <FeatureCard
+                    icon="🔍"
+                    title="Market Research"
+                    description="Live analysis of demand and demographics"
+                  />
+                  <FeatureCard
+                    icon="📍"
+                    title="Competitor Mapping"
+                    description="Real-world competitor intelligence"
+                  />
+                  <FeatureCard
+                    icon="🧠"
+                    title="AI Strategy"
+                    description="Deep reasoning and decision synthesis"
+                  />
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </main>
-    </CopilotSidebar>
+            )}
+          </div>
+        </main>
+      </CopilotSidebar>
+    </div>
   );
 }
 

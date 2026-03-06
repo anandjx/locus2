@@ -117,7 +117,8 @@ def search_places(target_location: str, business_type: str, radius_meters: int =
                 "rating": place.get("rating", 0),
                 "user_ratings_total": place.get("user_ratings_total", 0),
                 "business_status": place.get("business_status"),
-                "types": place.get("types", [])
+                "types": place.get("types", []),
+                "coordinates": f"{place.get('geometry', {}).get('location', {}).get('lat')},{place.get('geometry', {}).get('location', {}).get('lng')}"
             })
 
         return {

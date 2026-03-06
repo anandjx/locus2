@@ -28,6 +28,10 @@ class CompetitionProfile(BaseModel):
     chain_dominance_pct: float = Field(description="Percentage of chain/franchise competitors")
     avg_competitor_rating: float = Field(description="Average rating of competitors")
     high_performers_count: int = Field(description="Number of high-performing competitors (4.5+ rating)")
+    concentration_index_cci: float = Field(description="Concentration Index (CCI) representing top 2 players share, from 0.0 to 1.0")
+    req_daily_customers: int = Field(description="Required daily customers to break even")
+    feasibility_note: str = Field(description="Feasibility note concerning the required daily customers")
+    competitor_coordinates: List[str] = Field(default_factory=list, description="Array of 'lat,lng' strings for competitors in this zone")
 
 
 class MarketCharacteristics(BaseModel):
@@ -37,7 +41,10 @@ class MarketCharacteristics(BaseModel):
     income_level: str = Field(description="Income level of the area (Low/Medium/High)")
     infrastructure_access: str = Field(description="Description of infrastructure access")
     foot_traffic_pattern: str = Field(description="Description of foot traffic patterns")
-    rental_cost_tier: str = Field(description="Rental cost tier (Low/Medium/High)")
+    estimated_rent_tier: str = Field(description="Estimated rental cost tier (Low/Medium/High)")
+    latent_demand_ldi: float = Field(description="Latent Demand Index representing potential demand (0.01 to 1.0)")
+    observed_demand_odi: float = Field(description="Observed Demand Index representing current competitor activity (0.01 to 1.0)")
+    conversion_gap: float = Field(description="Demand Conversion Gap (LDI minus ODI). Positive means underserved.")
 
 
 class LocationRecommendation(BaseModel):
@@ -81,3 +88,4 @@ class LocationIntelligenceReport(BaseModel):
     alternative_locations: List[AlternativeLocation] = Field(description="Alternative location options")
     key_insights: List[str] = Field(description="Key strategic insights from the analysis")
     methodology_summary: str = Field(description="Summary of the analysis methodology")
+

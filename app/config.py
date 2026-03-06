@@ -43,7 +43,7 @@ class AgentConfig:
 
     # Models
     FAST_MODEL: str = "gemini-2.5-flash-lite"
-    MID_MODEL: str = "gemini-2.5-flash-lite"
+    MID_MODEL: str = "gemini-2.5-flash"
     PRO_MODEL: str = "gemini-2.5-pro"
     IMAGE_MODEL: str = "gemini-2.5-flash-image"
     CODE_EXEC_MODEL: str = "gemini-2.5-pro"

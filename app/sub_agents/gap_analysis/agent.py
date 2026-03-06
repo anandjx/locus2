@@ -1,99 +1,96 @@
 """Gap Analysis Agent - Part 2B of the Location Strategy Pipeline.
 
 This agent performs quantitative gap analysis using Python code execution.
-It safely separates Latent vs. Observed demand, computes Conversion Gaps, 
-and strictly bounds break-even metrics to prevent mathematical hallucinations.
+It safely separates Latent vs. Observed demand, uses Laplace smoothing for sparse data,
+and focuses on relative Break-Even proxies rather than absolute market capture.
 """
 
 from google.adk.agents.llm_agent import Agent
 from google.adk.code_executors import BuiltInCodeExecutor
 from google.genai import types
 
-from ...config import CODE_EXEC_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
+from ...config import CODE_EXEC_MODEL, MID_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
 from ...callbacks import before_gap_analysis, after_gap_analysis
 
 GAP_ANALYSIS_INSTRUCTION = """You are the Lead Quantitative Strategist & Risk Modeler at an elite private equity firm.
 
-Your task is to write and execute a highly stable, globally applicable Python script to calculate Risk-Adjusted Viability (RAV) and Market Conversion Gaps for retail locations.
+Your task is to write and execute a highly stable Python script to calculate Risk-Adjusted Viability (RAV) for retail locations.
 
 TARGET LOCATION: {target_location?}
 BUSINESS TYPE: {business_type?}
 
 ## INPUT DATA CONTEXT
-{market_research_findings}
-{competitor_analysis}
+{market_research_findings?}
+{competitor_analysis?}
 
 ## 🚨 EXECUTION INTEGRITY & SAFETY GUARDRAILS
 1. **NO CSV PARSING:** Instantiate `pandas.DataFrame` directly using a list of Python dictionaries.
-2. **CLAMPING:** All indices (LDI, ODI) must be strictly clamped between 0.01 and 1.0. 
-3. **ZERO-DIVISION SAFETY:** Always add `+ 1e-5` to denominators.
-4. **SPARSE DATA FALLBACK:** If `Total_Zone_Reviews` for a zone is less than 15, you MUST flag it as "Insufficient observed data." Do not fabricate metrics.
+2. **SMOOTHING SPARSE DATA:** The competitor data is a localized *sample* (Top 15), not the whole city. You MUST apply a baseline smoothing factor. No zone can have an ODI below 0.15. 
+3. **PEDESTRIAN MODIFIER:** Wealth alone does not drive retail. You must identify if a zone is a "Pedestrian/Commercial Hub" vs "Pure Residential". 
 
 ## STEP 1: PARSING & SEPARATING DEMAND
 Write Python code to extract and calculate the following for each Zone:
 
-1. **Latent Demand Index (LDI) (0.01 - 1.0):** - Parse qualitative demographic/infrastructure data into a normalized score. (e.g., High Population/Income = 0.8 to 1.0).
-2. **Observed Demand Index (ODI) (0.01 - 1.0):**
-   - Calculate using raw competitor data. Min-max scale `Competitor_Count` and `Total_Zone_Reviews` across all zones.
-   - `ODI = (Norm_Comp_Count * 0.5) + (Norm_Review_Count * 0.5)`
-3. **Rent Cost Proxy (0.01 - 1.0):** Extracted from market research.
+1. **Latent Demand Index (LDI) (0.1 to 1.0):** - Base = 0.5. Add +0.2 for High Wealth/Income. Add +0.3 for High Pedestrian/Commercial/Office footfall. (Maximum 1.0).
+2. **Observed Demand Index (ODI) (0.15 to 1.0):**
+   - Calculate using the raw competitor sample. Min-max scale `Competitor_Count`. 
+   - `ODI = (Norm_Comp_Count * 0.8) + 0.2` *(The +0.2 baseline prevents false "0.01 monopoly" readings from sparse sample data).*
+3. **Estimated Rent Tier Proxy (0.2 to 1.0):**
+   - 1.0 = Premium High Street, 0.6 = Mid-Tier/Suburban, 0.3 = Value/Developing.
 
 ## STEP 2: THE CONVERSION GAP & RAV MATH
 Implement these formulas in pandas:
 
 **1. Demand Conversion Gap (-1.0 to 1.0):**
 - `Conversion_Gap = LDI - ODI`
-- *Interpretation Mapping:* - Gap > 0.3: "Underserved Opportunity"
-  - -0.1 <= Gap <= 0.3: "Mature / Balanced Market"
-  - Gap < -0.1: "Oversaturated Market"
+- *Interpretation Mapping (STRICT IF/ELSE):* - Gap > 0.3: "Underserved (High Potential)"
+  - -0.1 <= Gap <= 0.3: "Mature / Proven Demand"
+  - Gap < -0.1: "Highly Saturated"
 
 **2. Risk-Adjusted Viability (RAV) (0 - 100):**
-- First, normalize the gap to a 0-1 scale: `Norm_Gap = (Conversion_Gap + 1.0) / 2.0`
-- `RAV = ( (LDI * 0.4) + (Norm_Gap * 0.4) + ((1.0 - Rent_Cost_Proxy) * 0.2) ) * 100`
+- `Norm_Gap = (Conversion_Gap + 1.0) / 2.0`
+- `RAV = ( (LDI * 0.40) + (Norm_Gap * 0.35) + ((1.0 - Estimated_Rent_Tier) * 0.25) ) * 100`
 
-**3. Bounded Market Share Simulation:**
-- `Req_Daily_Customers = 50 * (1.0 + Rent_Cost_Proxy) * (1.0 + ODI)`
-- `Estimated_Zone_Demand = (Total_Zone_Reviews / 365) * 10`
-- `Required_Market_Share = (Req_Daily_Customers / (Estimated_Zone_Demand + 1e-5)) * 100`
-
-**CRITICAL GUARDRAIL FOR OUTPUT:** If `Required_Market_Share` > 100%, the Python script MUST NOT output the percentage. It must output the exact string: *"Break-even demand exceeds currently observed market activity. Market expansion or cross-zone demand capture required."*
-If `Total_Zone_Reviews` < 15, output: *"Insufficient observed market activity data to compute reliable break-even estimates."*
+**3. Honest Break-Even Proxy:**
+- Do NOT calculate "Market Share %". It is statistically invalid with sample data.
+- Calculate **Required Daily Customers (RDC):** `RDC = 60 * (1.0 + Estimated_Rent_Tier) * (1.0 + ODI)`
+- *Logic:* Baseline is 60 customers/day. This scales up realistically (e.g., 90-150 customers) based on rent and competitor density.
 
 ## STEP 3: OUTPUT DELIVERABLES
-Your Python script must `print()` this EXACT Markdown report structure. 
+Your Python script must `print()` this EXACT Markdown report structure. Do NOT hallucinate contradictions. The narrative MUST match the Python logic.
 
 ### I. STRATEGIC CONVERSION VERDICT
-*(Write a 1-paragraph synthesis. Explain the relationship between Latent and Observed demand in the top zone. Is it an untapped blue ocean or a mature market?)*
+*(Write a 1-paragraph synthesis based STRICTLY on the math. Acknowledge the Pedestrian Footfall vs. Residential Wealth dynamic of the top zone.)*
 
 ### II. THE ENTREPRENEUR'S GLOSSARY
-*(Print exactly this text to explain the metrics simply and captivatingly:)*
 > 🧠 **How to read your market physics:**
-> - **Latent Demand (LDI):** The invisible potential. A measure of the area's population density, wealth, and infrastructure. *(The "Could Be")*
-> - **Observed Demand (ODI):** The current reality. A measure of existing competitors and their actual foot traffic. *(The "What Is")*
-> - **Conversion Gap:** The "Blue Ocean" size (LDI minus ODI). A high positive number means massive untapped potential waiting to be captured.
-> - **RAV (Risk-Adjusted Viability):** Your ultimate safety score (0-100), balancing raw demand against rent costs and competitor monopolies.
+> - **Latent Demand (LDI):** The underlying potential, heavily weighted toward pedestrian/commercial footfall, not just residential wealth.
+> - **Observed Demand (ODI):** The competitive density, baselined to account for sampling limits.
+> - **Conversion Gap:** LDI minus ODI. A positive number indicates room for growth.
+> - **RAV (Risk-Adjusted Viability):** Your ultimate safety score (0-100), balancing footfall potential against rent tier risks.
 
 ### III. QUANTITATIVE GAP LEADERBOARD
 | Zone Name | RAV (0-100) | Latent Demand (LDI) | Observed Demand (ODI) | Conversion Gap | Market Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-*(Sort by RAV descending. Status = Underserved / Mature / Oversaturated based on Conversion Gap).*
+*(Sort by RAV descending. Status MUST match the exact Conversion Gap logic).*
 
-### IV. FINANCIAL REALITY CHECK (REQUIRED MARKET SHARE)
-| Zone Name | Rent Proxy | Req. Daily Customers | Required Market Share |
+### IV. FINANCIAL REALITY CHECK (BREAK-EVEN PROXY)
+| Zone Name | Estimated Rent Tier | Req. Daily Customers | Feasibility Note |
 | :--- | :--- | :--- | :--- |
-*(Apply the Critical Guardrail logic here. NEVER output a percentage > 100%).*
+*(Feasibility Note: If RDC > 130, print "High Volume Required". If RDC <= 130, print "Standard Walk-in Viable").*
 
 ### V. DEEP DIVE: THE MATHEMATICAL THESIS
-*(Explain the Top Zone's math. Why does its LDI vs ODI ratio make it the safest capital allocation?)*
+*(Explain the Top Zone's math. Explicitly defend the Rent Tier and Pedestrian logic used.)*
+
 ---
 ### ⚠️ FINANCIAL & DATA DISCLAIMER
-> **Notice:** The metrics provided (RAV, LDI, ODI, and Market Share) are normalized mathematical proxies derived from public search and mapping data globally. They DO NOT represent verified construction costs, confirmed commercial lease rates or precise footfall measurements. This section is powered by a highly intelligent analytical reasoning model currently in Beta stage, designed to provide strategic directional insights. Users must conduct localized financial due diligence.
+> **Notice:** The metrics provided are directional proxies derived from localized data samples. Break-Even figures are estimations for strategic comparison only. This model focuses on structural market physics (footfall vs. rent) and is not a substitute for localized financial due diligence.
 """
 
 gap_analysis_agent = Agent(
     name="GapAnalysisAgent",
-    model=CODE_EXEC_MODEL,
-    description="Executes safely bounded GAP math, separating latent demographic potential from observed competitor activity.",
+    model=MID_MODEL,
+    description="Executes smoothed GAP math, balancing pedestrian footfall against rent proxies without relying on absolute market capture illusions.",
     instruction=GAP_ANALYSIS_INSTRUCTION,
     generate_content_config=types.GenerateContentConfig(
         temperature=0.0, 
@@ -109,7 +106,6 @@ gap_analysis_agent = Agent(
     before_agent_callback=before_gap_analysis,
     after_agent_callback=after_gap_analysis,
 )
-
 
 
 

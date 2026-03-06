@@ -8,6 +8,8 @@ Location Strategy Pipeline. Callbacks handle:
 """
 
 import json
+import time
+import asyncio
 import logging
 from datetime import datetime
 from typing import Optional
@@ -147,8 +149,21 @@ def after_market_research(callback_context: CallbackContext) -> Optional[types.C
     return None
 
 
-def after_competitor_mapping(callback_context: CallbackContext) -> Optional[types.Content]:
-    """Log completion of competitor mapping."""
+# def after_competitor_mapping(callback_context: CallbackContext) -> Optional[types.Content]:
+#     """Log completion of competitor mapping."""
+#     analysis = callback_context.state.get("competitor_analysis", "")
+#     analysis_len = len(analysis) if isinstance(analysis, str) else 0
+
+#     logger.info(f"STAGE 2A: COMPLETE - Competitor analysis: {analysis_len} characters")
+
+#     stages = callback_context.state.get("stages_completed", [])
+#     stages.append("competitor_mapping")
+#     callback_context.state["stages_completed"] = stages
+
+#     return None
+
+async def after_competitor_mapping(callback_context: CallbackContext) -> Optional[types.Content]:
+    """Log completion of competitor mapping and pause to prevent 429 errors."""
     analysis = callback_context.state.get("competitor_analysis", "")
     analysis_len = len(analysis) if isinstance(analysis, str) else 0
 
@@ -157,6 +172,15 @@ def after_competitor_mapping(callback_context: CallbackContext) -> Optional[type
     stages = callback_context.state.get("stages_completed", [])
     stages.append("competitor_mapping")
     callback_context.state["stages_completed"] = stages
+
+    # --- SOTA QUOTA THROTTLE ADDED HERE ---
+    logger.info("⏸️ PAUSING PIPELINE FOR 60 SECONDS...")
+    logger.info("Waiting for Google Cloud Vertex AI Token Quota to reset before Gap Analysis.")
+    
+    await asyncio.sleep(60) # Non-blocking sleep to keep the connection alive
+    
+    logger.info("▶️ RESUMING PIPELINE: Token bucket refreshed. Initiating Gap Analysis.")
+    # --------------------------------------
 
     return None
 
