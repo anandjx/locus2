@@ -7,9 +7,9 @@ interface StaticMapCardProps {
 export function StaticMapCard({ coordinates }: StaticMapCardProps) {
     if (!coordinates || coordinates.length === 0) {
         return (
-            <div className="card card-indigo p-5 h-40 flex flex-col items-center justify-center text-slate-400">
-                <span className="text-3xl mb-2">🗺️</span>
-                <p className="text-xs font-medium">Map data unavailable</p>
+            <div className="card card-indigo p-6 h-48 flex flex-col items-center justify-center text-slate-400">
+                <span className="text-4xl mb-3">🗺️</span>
+                <p className="text-sm font-medium">Map data unavailable</p>
             </div>
         );
     }
@@ -26,17 +26,18 @@ export function StaticMapCard({ coordinates }: StaticMapCardProps) {
     return (
         <div className="card card-indigo overflow-hidden animate-fade-in delay-2">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <div className="flex items-center justify-between mb-4 px-1">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
                     <span className="text-lg">🌐</span> Geospatial Market Visualization
                 </h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">
+                <span className="px-3 py-1 rounded-full text-[10px] font-bold border bg-indigo-50 text-indigo-700 border-indigo-200 shadow-sm">
                     {coordinates.length} Locations
                 </span>
             </div>
 
-            {/* Map Container */}
-            <div className="relative w-full h-64 rounded-2xl overflow-hidden border border-indigo-100/50 bg-slate-50 ring-2 ring-indigo-100/40">
+            {/* Map Container — taller for meaningful spatial insight */}
+            <div className="relative w-full rounded-2xl overflow-hidden border border-indigo-100/50 bg-slate-50 ring-2 ring-indigo-100/40 shadow-inner"
+                style={{ height: '420px' }}>
                 <img
                     src={imageUrl}
                     alt="Competitor Map"

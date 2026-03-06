@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
         return new NextResponse("Server missing Maps API Key", { status: 500 });
     }
 
-    // Construct the Google Maps Static API URL
+    // Construct marker strings with slightly larger red markers
     const markerString = markers.map(m => `markers=color:red%7Cscale:2|${m}`).join("&");
 
     // Parse all coordinates to compute tight bounds
@@ -52,19 +52,20 @@ export async function GET(req: NextRequest) {
         const centerLat = (minLat + maxLat) / 2;
         const centerLng = (minLng + maxLng) / 2;
 
-        // Calculate the span with padding (30% extra on each side)
-        const latSpan = Math.max((maxLat - minLat) * 1.6, 0.005);
-        const lngSpan = Math.max((maxLng - minLng) * 1.6, 0.005);
+        // Calculate span with generous padding (40% extra) so all pins comfortably fit
+        const latSpan = Math.max((maxLat - minLat) * 1.8, 0.008);
+        const lngSpan = Math.max((maxLng - minLng) * 1.8, 0.008);
 
-        // Derive zoom: ln(360 / span) / ln(2), capped between 12–16
+        // Derive zoom: ln(360/span)/ln(2), wider range 10–15 so spread-out markers fit
         const zoomLat = Math.log2(180 / latSpan);
         const zoomLng = Math.log2(360 / lngSpan);
-        const zoom = Math.max(12, Math.min(16, Math.floor(Math.min(zoomLat, zoomLng))));
+        const zoom = Math.max(10, Math.min(15, Math.floor(Math.min(zoomLat, zoomLng))));
 
         centerZoomParams = `&center=${centerLat},${centerLng}&zoom=${zoom}`;
     }
 
-    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x400&scale=2&maptype=roadmap${centerZoomParams}&${markerString}&key=${apiKey}`;
+    // Larger map image (800x500) for better detail at scale=2
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=800x500&scale=2&maptype=roadmap${centerZoomParams}&${markerString}&key=${apiKey}`;
 
     try {
         const response = await fetch(staticMapUrl);

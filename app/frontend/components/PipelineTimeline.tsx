@@ -4,16 +4,20 @@ import { useState, useCallback } from "react";
 import type { AgentState, TimelineStepConfig, CollapsedSteps } from "@/lib/types";
 import { CollapsibleStep } from "./CollapsibleStep";
 import { StepOutputContent } from "./StepOutputContent";
+import { StaticMapCard } from "./StaticMapCard";
 
-/* Each step gets a unique accent color for its completed state */
+/* Each step gets a unique accent color matching the CollapsibleStep color map */
 const TIMELINE_STEPS: (TimelineStepConfig & { accent: string })[] = [
-  { id: "intake", label: "Parsed", stageKey: "intake", tool: null, accent: "sky" },
-  { id: "market_research", label: "Market", stageKey: "market_research", tool: { icon: "🔍", name: "google_search" }, accent: "teal" },
-  { id: "competitor_mapping", label: "Competitors", stageKey: "competitor_mapping", tool: { icon: "📍", name: "search_places" }, accent: "coral" },
-  { id: "gap_analysis", label: "Gap", stageKey: "gap_analysis", tool: { icon: "🐍", name: "python_code" }, accent: "rose" },
-  { id: "strategy_synthesis", label: "Strategy", stageKey: "strategy_synthesis", tool: { icon: "🧠", name: "deep_thinking" }, accent: "lavender" },
+  { id: "intake", label: "Parsed", stageKey: "intake", tool: null, accent: "blue" },
+  { id: "market_research", label: "Market", stageKey: "market_research", tool: { icon: "🔍", name: "google_search" }, accent: "emerald" },
+  { id: "competitor_mapping", label: "Competitors", stageKey: "competitor_mapping", tool: { icon: "📍", name: "search_places" }, accent: "orange" },
+  { id: "gap_analysis", label: "Gap", stageKey: "gap_analysis", tool: { icon: "🐍", name: "python_code" }, accent: "purple" },
+  { id: "strategy_synthesis", label: "Strategy", stageKey: "strategy_synthesis", tool: { icon: "🧠", name: "deep_thinking" }, accent: "rose" },
   { id: "report_generation", label: "Report", stageKey: "report_generation", tool: { icon: "📄", name: "html_report" }, accent: "indigo" },
 ];
+
+/* Steps that render side-by-side in 63/37 columns */
+const SIDE_BY_SIDE_IDS = new Set(["market_research", "competitor_mapping"]);
 
 interface PipelineTimelineProps {
   state: AgentState;
@@ -38,6 +42,37 @@ export function PipelineTimeline({ state, currentStage, completedStages }: Pipel
 
   const completedCount = completedStages.length;
   const showIntake = Boolean(state.target_location);
+
+  /* Pre-compute visibility and status for all steps */
+  const stepData = TIMELINE_STEPS.map((step, index) => {
+    const status = getStepStatus(step);
+    const shouldShow =
+      step.id === "intake"
+        ? showIntake
+        : completedStages.includes(step.stageKey) ||
+        currentStage === step.stageKey ||
+        currentStage === step.id ||
+        (status === "pending" && index > 0 &&
+          (completedStages.includes(TIMELINE_STEPS[index - 1].stageKey) ||
+            currentStage === TIMELINE_STEPS[index - 1].stageKey));
+    const actualStatus = step.id === "intake" && showIntake ? "complete" : status;
+    /* DEFAULT EXPANDED — collapsed[id] === true means user explicitly collapsed */
+    const isExpanded = actualStatus === "in_progress" || collapsed[step.id] !== true;
+    return { step, index, shouldShow, actualStatus, isExpanded };
+  });
+
+  /* Separate "before", "side-by-side", and "after" groups */
+  const beforeSteps = stepData.filter(d => d.shouldShow && !SIDE_BY_SIDE_IDS.has(d.step.id) && d.index < 2);
+  const marketStep = stepData.find(d => d.step.id === "market_research");
+  const competitorStep = stepData.find(d => d.step.id === "competitor_mapping");
+  const afterSteps = stepData.filter(d => d.shouldShow && !SIDE_BY_SIDE_IDS.has(d.step.id) && d.index >= 3);
+
+  const showMarket = marketStep?.shouldShow;
+  const showCompetitor = competitorStep?.shouldShow;
+  const showSideBySide = showMarket || showCompetitor;
+
+  /* Get map coordinates from strategic report */
+  const coords = state?.strategic_report?.top_recommendation?.competition?.competitor_coordinates;
 
   return (
     <div className="card card-sky overflow-hidden">
@@ -78,39 +113,80 @@ export function PipelineTimeline({ state, currentStage, completedStages }: Pipel
         </div>
       </div>
 
-      {/* ── Collapsible Step Details ── */}
-      <div className="p-4 space-y-3">
-        {TIMELINE_STEPS.map((step, index) => {
-          const status = getStepStatus(step);
-          const shouldShow =
-            step.id === "intake"
-              ? showIntake
-              : completedStages.includes(step.stageKey) ||
-              currentStage === step.stageKey ||
-              currentStage === step.id ||
-              (status === "pending" && index > 0 &&
-                (completedStages.includes(TIMELINE_STEPS[index - 1].stageKey) ||
-                  currentStage === TIMELINE_STEPS[index - 1].stageKey));
+      {/* ── Step Details — increased spacing between cards ── */}
+      <div className="p-5 space-y-5">
 
-          if (!shouldShow) return null;
+        {/* 1) Before steps (Parsed/Intake) — full width */}
+        {beforeSteps.map(({ step, index, actualStatus, isExpanded }) => (
+          <CollapsibleStep
+            key={step.id}
+            step={step}
+            stepNumber={index + 1}
+            status={actualStatus}
+            accent={step.accent}
+            isExpanded={isExpanded}
+            onToggle={() => toggleStep(step.id)}
+          >
+            <StepOutputContent stepId={step.id} state={state} />
+          </CollapsibleStep>
+        ))}
 
-          const actualStatus = step.id === "intake" && showIntake ? "complete" : status;
-          const isExpanded = actualStatus === "in_progress" || !collapsed[step.id];
+        {/* 2) Market + Competitors — SIDE BY SIDE 63/37 with breathing room */}
+        {showSideBySide && (
+          <div className="grid gap-5" style={{ gridTemplateColumns: '63% 1fr' }}>
+            {/* Left: Market (63%) */}
+            <div className="min-w-0">
+              {showMarket && marketStep && (
+                <CollapsibleStep
+                  step={marketStep.step}
+                  stepNumber={2}
+                  status={marketStep.actualStatus}
+                  accent={marketStep.step.accent}
+                  isExpanded={marketStep.isExpanded}
+                  onToggle={() => toggleStep(marketStep.step.id)}
+                >
+                  <StepOutputContent stepId={marketStep.step.id} state={state} />
+                </CollapsibleStep>
+              )}
+            </div>
 
-          return (
-            <CollapsibleStep
-              key={step.id}
-              step={step}
-              stepNumber={index + 1}
-              status={actualStatus}
-              accent={step.accent}
-              isExpanded={isExpanded}
-              onToggle={() => toggleStep(step.id)}
-            >
-              <StepOutputContent stepId={step.id} state={state} />
-            </CollapsibleStep>
-          );
-        })}
+            {/* Right: Competitors (37%) — min-w-0 + overflow-hidden for breathing room */}
+            <div className="min-w-0 overflow-hidden">
+              {showCompetitor && competitorStep && (
+                <CollapsibleStep
+                  step={competitorStep.step}
+                  stepNumber={3}
+                  status={competitorStep.actualStatus}
+                  accent={competitorStep.step.accent}
+                  isExpanded={competitorStep.isExpanded}
+                  onToggle={() => toggleStep(competitorStep.step.id)}
+                >
+                  <StepOutputContent stepId={competitorStep.step.id} state={state} />
+                </CollapsibleStep>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 3) Map — full width below Market + Competitors */}
+        {coords && coords.length > 0 && (
+          <StaticMapCard coordinates={coords} />
+        )}
+
+        {/* 4) Remaining steps (Gap, Strategy, Report) — full width */}
+        {afterSteps.map(({ step, index, actualStatus, isExpanded }) => (
+          <CollapsibleStep
+            key={step.id}
+            step={step}
+            stepNumber={index + 1}
+            status={actualStatus}
+            accent={step.accent}
+            isExpanded={isExpanded}
+            onToggle={() => toggleStep(step.id)}
+          >
+            <StepOutputContent stepId={step.id} state={state} />
+          </CollapsibleStep>
+        ))}
       </div>
 
       {/* All Complete */}
@@ -118,7 +194,7 @@ export function PipelineTimeline({ state, currentStage, completedStages }: Pipel
         <div className="px-5 py-3 bg-gradient-to-r from-indigo-50/50 to-sky-50/30 border-t border-sky-100/50">
           <div className="flex items-center justify-center gap-2 text-indigo-700 text-sm font-medium">
             <span>✅</span>
-            <span>Analysis Complete — scroll down for the full dashboard</span>
+            <span>Analysis Complete</span>
           </div>
         </div>
       )}

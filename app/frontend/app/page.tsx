@@ -5,12 +5,9 @@ import { useCoAgent, useCoAgentStateRender } from "@copilotkit/react-core";
 
 import { PipelineTimeline } from "@/components/PipelineTimeline";
 import { LocationReport } from "@/components/LocationReport";
-import { CompetitorCard } from "@/components/CompetitorCard";
-import { MarketCard } from "@/components/MarketCard";
 import { AlternativeLocations } from "@/components/AlternativeLocations";
 import { ArtifactViewer } from "@/components/ArtifactViewer";
 import { AgentStatus } from "@/components/AgentStatus";
-import { StaticMapCard } from "@/components/StaticMapCard";
 
 import type { AgentState } from "@/lib/types";
 
@@ -44,12 +41,6 @@ export default function Home() {
 
   const isProcessing = !!state?.pipeline_stage && !state?.strategic_report;
   const pipelineStarted = !!state?.target_location || !!state?.pipeline_stage;
-  const rec = state?.strategic_report?.top_recommendation;
-  const coords = rec?.competition?.competitor_coordinates;
-
-  /* Progressive data availability checks */
-  const hasMarket = !!rec?.market;
-  const hasCompetitor = !!rec?.competition;
   const hasReport = !!state?.strategic_report;
   const hasAlternatives = (state?.strategic_report?.alternative_locations?.length ?? 0) > 0;
 
@@ -121,54 +112,6 @@ Provide your **business idea** and **geographic region clearly** and I will anal
                   />
                 </div>
 
-                {/* ── Two-Column Dashboard: Market (63%) | Competitor (37%) ── */}
-                {/* Shows immediately — cards appear progressively as data arrives */}
-                <div className="grid grid-cols-1 lg:grid-cols-[63%_1fr] gap-6 mb-6">
-                  {/* Left Column — Market Intelligence */}
-                  <div className="space-y-6">
-                    {hasMarket ? (
-                      <MarketCard market={rec!.market} />
-                    ) : (
-                      <SkeletonCard
-                        icon="📈"
-                        title="Market Intelligence"
-                        accent="teal"
-                        message={
-                          state?.stages_completed?.includes("gap_analysis")
-                            ? "Synthesizing market data..."
-                            : state?.stages_completed?.includes("market_research")
-                              ? "Market research complete — awaiting analysis..."
-                              : "Collecting market data..."
-                        }
-                      />
-                    )}
-                  </div>
-
-                  {/* Right Column — Competitor Profile */}
-                  <div className="space-y-6">
-                    {hasCompetitor ? (
-                      <CompetitorCard competition={rec!.competition} />
-                    ) : (
-                      <SkeletonCard
-                        icon="⚔️"
-                        title="Competition Profile"
-                        accent="coral"
-                        message={
-                          state?.stages_completed?.includes("competitor_mapping")
-                            ? "Competitor data collected — awaiting synthesis..."
-                            : "Mapping competitors..."
-                        }
-                      />
-                    )}
-                  </div>
-                </div>
-
-                {/* ── Map — separate full-width card ── */}
-                {coords && coords.length > 0 && (
-                  <div className="mb-6 animate-fade-in delay-1">
-                    <StaticMapCard coordinates={coords} />
-                  </div>
-                )}
 
                 {/* ── Hero Report — shows after strategy synthesis ── */}
                 {hasReport && (
@@ -226,29 +169,6 @@ Provide your **business idea** and **geographic region clearly** and I will anal
   );
 }
 
-/* ── Skeleton placeholder card shown while data loads ── */
-function SkeletonCard({ icon, title, accent, message }: {
-  icon: string; title: string; accent: string; message: string;
-}) {
-  const accentClass = accent === "teal" ? "card-teal" : "card-coral";
-  return (
-    <div className={`card ${accentClass} animate-fade-in`}>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-lg">{icon}</span>
-        <h3 className="font-bold text-slate-900">{title}</h3>
-      </div>
-      <div className="space-y-3">
-        <div className="h-3 bg-slate-200/60 rounded-full w-3/4 animate-pulse" />
-        <div className="h-3 bg-slate-200/40 rounded-full w-1/2 animate-pulse delay-1" />
-        <div className="h-3 bg-slate-200/30 rounded-full w-2/3 animate-pulse delay-2" />
-      </div>
-      <p className="text-xs text-slate-400 mt-4 flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 bg-teal-400 rounded-full animate-pulse" />
-        {message}
-      </p>
-    </div>
-  );
-}
 
 function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
   return (

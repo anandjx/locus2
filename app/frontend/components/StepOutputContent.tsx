@@ -34,7 +34,7 @@ export function StepOutputContent({ stepId, state }: StepOutputContentProps) {
       return (
         <ScrollableMarkdown
           content={state.market_research_findings || ""}
-          maxHeight="12rem"
+          maxHeight="40rem"
         />
       );
 
@@ -47,7 +47,7 @@ export function StepOutputContent({ stepId, state }: StepOutputContentProps) {
           {state.competitor_analysis && (
             <ScrollableMarkdown
               content={state.competitor_analysis}
-              maxHeight="12rem"
+              maxHeight="36rem"
             />
           )}
         </div>
