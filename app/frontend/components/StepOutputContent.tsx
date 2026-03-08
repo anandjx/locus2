@@ -72,33 +72,55 @@ export function StepOutputContent({ stepId, state }: StepOutputContentProps) {
         return <p className="text-gray-500 text-sm italic">Generating report...</p>;
       }
       return (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-green-700">7-slide McKinsey-style presentation ready</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => {
-                const blob = new Blob([state.html_report_content!], { type: "text/html" });
-                const url = URL.createObjectURL(blob);
-                window.open(url, "_blank");
-              }}
-              className="px-3 py-1 text-xs bg-blue-500 text-white/90 rounded hover:bg-blue-600 transition-colors"
-            >
-              View Report
-            </button>
-            <button
-              onClick={() => {
-                const blob = new Blob([state.html_report_content!], { type: "text/html" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "executive_report.html";
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
-            >
-              Download HTML
-            </button>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-green-700">7-slide McKinsey-style presentation ready</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const blob = new Blob([state.html_report_content!], { type: "text/html" });
+                  const url = URL.createObjectURL(blob);
+                  window.open(url, "_blank");
+                }}
+                className="px-3 py-1 text-xs bg-blue-500 text-white/90 rounded hover:bg-blue-600 transition-colors"
+              >
+                View Report
+              </button>
+              <button
+                onClick={() => {
+                  const blob = new Blob([state.html_report_content!], { type: "text/html" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "executive_report.html";
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                className="px-3 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors"
+              >
+                Download HTML
+              </button>
+            </div>
+          </div>
+
+          {/* Technical Notice — Legal compliance */}
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              <span className="font-semibold text-slate-500">Technical Notice:</span>{" "}
+              This report is a synthesis of geospatial data provided by the Google Places API and Google Maps Platform,
+              combined with multi-agent reasoning powered by Google Vertex AI (Gemini). All outputs are probabilistic
+              and should be independently verified before making business decisions.
+              Foundational architectural patterns adapted from{" "}
+              <a
+                href="https://github.com/google/adk-samples"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-slate-600"
+              >
+                google/adk-samples
+              </a>{" "}
+              (Apache 2.0).
+            </p>
           </div>
         </div>
       );

@@ -11,7 +11,7 @@ from ...config import FAST_MODEL, PRO_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
 from ...tools import search_places
 from ...callbacks import before_competitor_mapping, after_competitor_mapping
 
-COMPETITOR_MAPPING_INSTRUCTION = """You are an elite Retail Location Strategist and Structural Market Economist. Your mandate is to execute a rigorous Competitive Power Analysis using REAL-TIME Google Maps data.
+COMPETITOR_MAPPING_INSTRUCTION = """You are an elite best in the class Retail Location Strategist and Structural Market Economist. Your mandate is to execute a rigorous Competitive Power Analysis using REAL-TIME Google Maps data.
 
 TARGET LOCATION: {target_location?}
 BUSINESS TYPE: {business_type?}

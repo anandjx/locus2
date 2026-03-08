@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { CopilotSidebar } from "@copilotkit/react-ui";
 import { useCoAgent, useCoAgentStateRender } from "@copilotkit/react-core";
 
@@ -45,15 +46,23 @@ export default function Home() {
   const hasAlternatives = (state?.strategic_report?.alternative_locations?.length ?? 0) > 0;
 
   return (
-    <div className="transition-opacity duration-300 min-h-screen">
-      {isProcessing && (
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            .copilotKitInput, [data-copilotkit-chat-input] { pointer-events: none !important; opacity: 0.6 !important; }
-            .copilotKitButton { pointer-events: none !important; opacity: 0.6 !important; }
-          `
-        }} />
-      )}
+    <div className="transition-opacity duration-300 min-h-screen flex flex-col">
+      {/* Chat disclaimer injected via CSS */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          ${isProcessing ? '.copilotKitInput, [data-copilotkit-chat-input] { pointer-events: none !important; opacity: 0.6 !important; } .copilotKitButton { pointer-events: none !important; opacity: 0.6 !important; }' : ''}
+          .copilotKitMessages::after {
+            content: 'AI-generated strategy. Verify all results before asset deployment. Not professional real estate advice.';
+            display: block;
+            padding: 6px 16px;
+            font-size: 10px;
+            font-style: italic;
+            color: rgba(100, 116, 139, 0.6);
+            text-align: center;
+            line-height: 1.4;
+          }
+        `
+      }} />
       <CopilotSidebar
         defaultOpen={false}
         clickOutsideToClose={true}
@@ -84,7 +93,7 @@ Provide your **business idea** and **geographic region clearly** and I will anal
             <header className="mb-8 animate-fade-in">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <h1 className="text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
+                  <h1 className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
                     {AGENT_CONFIG.productName}
                   </h1>
                   <p className="text-slate-600 text-lg">
@@ -164,6 +173,26 @@ Provide your **business idea** and **geographic region clearly** and I will anal
             )}
           </div>
         </main>
+
+        {/* ===== GLOBAL FOOTER — Legal & Compliance ===== */}
+        <footer className="mt-auto border-t border-slate-100/60 bg-white/40 backdrop-blur-sm">
+          <div className="max-w-[1440px] mx-auto px-5 py-4 lg:px-8 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+              <span>© {new Date().getFullYear()} Intsemble</span>
+              <span className="text-slate-200">·</span>
+              <Link href="/terms" className="hover:text-slate-600 transition-colors underline-offset-2 hover:underline">
+                Terms
+              </Link>
+              <span className="text-slate-200">·</span>
+              <Link href="/privacy" className="hover:text-slate-600 transition-colors underline-offset-2 hover:underline">
+                Privacy
+              </Link>
+            </div>
+            <p className="text-[9px] text-slate-300 font-medium tracking-wide">
+              Powered by Google Maps Platform
+            </p>
+          </div>
+        </footer>
       </CopilotSidebar>
     </div>
   );
