@@ -34,7 +34,7 @@ Synthesize your findings into this exact premium executive briefing format.
 
 ### II. GEOSPATIAL MARKET VISUALIZATION
 *(Extract the exact latitude and longitude coordinates for the Top 5 Direct Competitors returned. Output them using this exact Markdown image format. Separate multiple markers with `&marker=`. DO NOT include spaces.)*
-![Competitor Density Map](http://localhost:3000/api/static-map?marker=lat1,lng1&marker=lat2,lng2&marker=lat3,lng3&marker=lat4,lng4&marker=lat5,lng5)
+![Competitor Density Map](/api/static-map?marker=lat1,lng1&marker=lat2,lng2&marker=lat3,lng3&marker=lat4,lng4&marker=lat5,lng5)
 
 ### III. VERIFIED COMPETITOR LEDGER (REAL-TIME DATA)
 *(Generate two Markdown tables based strictly on the cleansed tool data. Limit to top 15 Direct and top 5 Complementary.)*
@@ -116,6 +116,9 @@ competitor_mapping_agent = Agent(
 
 
 
+# ### II. GEOSPATIAL MARKET VISUALIZATION
+# *(Extract the exact latitude and longitude coordinates for the Top 5 Direct Competitors returned. Output them using this exact Markdown image format. Separate multiple markers with `&marker=`. DO NOT include spaces.)*
+# ![Competitor Density Map](http://localhost:3000/api/static-map?marker=lat1,lng1&marker=lat2,lng2&marker=lat3,lng3&marker=lat4,lng4&marker=lat5,lng5)
 
 
 

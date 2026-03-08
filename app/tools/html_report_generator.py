@@ -5,6 +5,7 @@ from strategic report data. Saves the generated HTML as a dynamically named arti
 """
 
 import logging
+import os
 from datetime import datetime
 from google.adk.tools import ToolContext
 from google.genai import types
@@ -14,6 +15,22 @@ from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_excep
 from ..config import PRO_MODEL
 
 logger = logging.getLogger("LocationStrategyPipeline")
+
+
+def _create_genai_client():
+    """Create a genai.Client that works in both local (API key) and Cloud Run (Vertex AI) modes."""
+    from google import genai
+
+    if os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE":
+        logger.info("Initializing genai.Client in Vertex AI mode")
+        return genai.Client(
+            vertexai=True,
+            project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
+            location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+        )
+    else:
+        logger.info("Initializing genai.Client in API Key mode")
+        return genai.Client()
 
 async def generate_html_report(
     report_data: str, 
@@ -30,8 +47,7 @@ async def generate_html_report(
         tool_context: ADK ToolContext for saving artifacts.
     """
     try:
-        from google import genai
-        client = genai.Client()
+        client = _create_genai_client()
         current_date = datetime.now().strftime("%Y-%m-%d")
 
         # Create a clean, safe filename (e.g., Gym_Versova_Mumbai_Locus_Report.html)
