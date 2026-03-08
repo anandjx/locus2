@@ -9,7 +9,7 @@ from google.adk.agents.llm_agent import Agent
 from google.adk.tools import google_search
 from google.genai import types
 
-from ...config import PRO_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
+from ...config import PRO_MODEL, PROZ_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
 from ...callbacks import before_market_research, after_market_research
 
 MARKET_RESEARCH_INSTRUCTION = """You are an elite Retail Location Strategist and Predictive Market Oracle at a top-tier private equity advisory firm. Your mandate is to de-risk capital allocation for entrepreneurs by providing hyper-accurate, verifiable, and highly dense market intelligence.
@@ -102,7 +102,7 @@ Synthesize your findings into this premium executive briefing:
 
 market_research_agent = Agent(
     name="MarketResearchAgent",
-    model=PRO_MODEL, # Upgraded to PRO_MODEL for rigorous reasoning and constraint adherence
+    model=PROZ_MODEL, # Upgraded to PRO_MODEL for rigorous reasoning and constraint adherence
     description="Acts as a predictive market oracle with strict data/inference separation for zero-hallucination WOI scoring.",
     instruction=MARKET_RESEARCH_INSTRUCTION,
     generate_content_config=types.GenerateContentConfig(

@@ -74,7 +74,7 @@ export function StepOutputContent({ stepId, state }: StepOutputContentProps) {
       return (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-green-700">7-slide McKinsey-style presentation ready</span>
+            <span className="text-sm text-green-700">7-slide Executive Briefing ready</span>
             <div className="flex gap-2">
               <button
                 onClick={() => {

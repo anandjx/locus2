@@ -12,7 +12,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from ...config import FAST_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
+from ...config import FAST_MODEL, MID_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
 
 
 class UserRequest(BaseModel):
@@ -86,7 +86,7 @@ If the user doesn't specify a clear location or business type, make a reasonable
 
 intake_agent = LlmAgent(
     name="IntakeAgent",
-    model="gemini-2.0-flash",
+    model=MID_MODEL,
     description="Parses user request to extract target location and business type",
     instruction=INTAKE_INSTRUCTION,
     generate_content_config=types.GenerateContentConfig(

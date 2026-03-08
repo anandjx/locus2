@@ -9,7 +9,7 @@ from google.adk.planners import BuiltInPlanner
 from google.genai import types
 from google.genai.types import ThinkingConfig
 
-from ...config import PRO_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
+from ...config import PRO_MODEL, PROZ_MODEL, RETRY_INITIAL_DELAY, RETRY_ATTEMPTS
 from ...schemas import LocationIntelligenceReport
 from ...callbacks import before_strategy_advisor, after_strategy_advisor
 
@@ -66,7 +66,7 @@ Use precise, data-backed language. NO generic business advice.
 
 strategy_advisor_agent = LlmAgent(
     name="StrategyAdvisorAgent",
-    model=PRO_MODEL, 
+    model=PROZ_MODEL, 
     description="Synthesizes multi-agent findings into an institutional-grade investment memo using extended reasoning and structured JSON.",
     instruction=STRATEGY_ADVISOR_INSTRUCTION,
     generate_content_config=types.GenerateContentConfig(

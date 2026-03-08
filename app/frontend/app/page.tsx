@@ -76,11 +76,13 @@ Provide your **business idea** and **geographic region clearly** and I will anal
 <br />
 **A fully structured HTML report will be delivered at the end of the analysis**.
 
-**Try examples:**
+**Examples:**
 - "Coworking space in Viman Nagar, Pune" 
-- "Coffee shop in Park Street, Kolkata"
-- "Analyze Manhattan for a fitness studio"
-- "Best bakery location in Berlin"
+- "Analyze Manhattan for a fitness studio"  
+- "Coffee shop in Park Street, Kolkata"  
+- "Best bakery location in Berlin"  
+
+It usually takes about **3 minutes to 5 minutes** after confirmation of the location and business idea by Locus, for the **analysis to begin and generate the report**.
 
 ⚠️ **IMPORTANT**: Once your query is confirmed, you can **close this sidebar** using the **X** button (top-right) to instantly view the **full-screen interactive report** updating live
 `,
@@ -155,9 +157,9 @@ Provide your **business idea** and **geographic region clearly** and I will anal
                   Discover the Optimal Location for your Business
                 </h2>
                 <p className="text-slate-700 max-w-xl mx-auto mb-10 text-lg leading-relaxed text-center">
-                  Enter your business idea and city in the chat to receive
-                  AI-driven market research, competitor analysis and
-                  strategic recommendations.
+                  Enter your business idea and precise location with city name in the chat to receive
+                  AI-driven deep market research, competitor analysis
+                  and strategic recommendations.
                   <br />
                   <span className="mt-2 inline-block text-slate-500 text-base">
                     To begin, click the <span className="font-medium text-slate-700">💬 chat bubble</span> in the lower-right corner.
