@@ -1,177 +1,544 @@
 """HTML Report Generator tool for creating executive reports.
 
-Uses direct text generation to create McKinsey/BCG style HTML presentations 
-from strategic report data. Saves the generated HTML as a dynamically named artifact.
+100% Python-templated — zero truncation risk, zero hallucination,
+zero API-call silence (instant generation, no SSE timeout).
+Generates McKinsey/BCG style HTML presentations from strategic report data.
+Saves the generated HTML as a dynamically named artifact.
 """
 
+import json
 import logging
-import os
 from datetime import datetime
 from google.adk.tools import ToolContext
 from google.genai import types
-from google.genai.errors import ServerError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-from ..config import MID_MODEL
 
 logger = logging.getLogger("LocationStrategyPipeline")
 
 
-def _create_genai_client():
-    """Create a genai.Client that works in both local (API key) and Cloud Run (Vertex AI) modes."""
-    from google import genai
+# ─────────────────────────────────────────────────────────────────────
+# Helper: safely extract data from the strategic report (dict or Pydantic)
+# ─────────────────────────────────────────────────────────────────────
 
-    if os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE":
-        # genai.Client needs a real compute region for model API calls.
-        # "global" works for vertexai.init() (ADK routing) but NOT for direct
-        # model generation endpoints. Fall back to us-central1.
-        raw_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
-        api_location = "us-central1" if raw_location.lower() == "global" else raw_location
+def _get(obj, key, default=""):
+    """Safely get a value from dict or Pydantic model."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
-        logger.info(f"Initializing genai.Client in Vertex AI mode (location={api_location})")
-        return genai.Client(
-            vertexai=True,
-            project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
-            location=api_location,
-        )
+
+def _to_dict(obj):
+    """Convert obj to dict if it's a Pydantic model."""
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    if isinstance(obj, dict):
+        return obj
+    if isinstance(obj, str):
+        try:
+            return json.loads(obj)
+        except Exception:
+            return {}
+    return {}
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Core HTML builder
+# ─────────────────────────────────────────────────────────────────────
+
+def _build_report_html(report: dict, business_type: str, target_location: str) -> str:
+    """Build a complete McKinsey/BCG-style HTML report from structured data."""
+
+    analysis_date = report.get("analysis_date", datetime.now().strftime("%Y-%m-%d"))
+    market_validation = report.get("market_validation", "Analysis Complete")
+    total_competitors = report.get("total_competitors_found", 0)
+    zones_analyzed = report.get("zones_analyzed", 0)
+
+    rec = report.get("top_recommendation", {})
+    rec_name = rec.get("location_name", "N/A")
+    rec_area = rec.get("area", "")
+    rec_score = rec.get("overall_score", 0)
+    rec_opp = rec.get("opportunity_type", "")
+    rec_segment = rec.get("best_customer_segment", "")
+    rec_traffic = rec.get("estimated_foot_traffic", "")
+
+    strengths = rec.get("strengths", [])
+    concerns = rec.get("concerns", [])
+    next_steps = rec.get("next_steps", [])
+
+    comp = rec.get("competition", {})
+    mkt = rec.get("market", {})
+
+    alts = report.get("alternative_locations", [])
+    insights = report.get("key_insights", [])
+    methodology = report.get("methodology_summary", "Multi-agent AI analysis pipeline.")
+
+    # Score color
+    if rec_score >= 75:
+        score_color = "#059669"
+    elif rec_score >= 50:
+        score_color = "#d97706"
     else:
-        logger.info("Initializing genai.Client in API Key mode")
-        return genai.Client()
+        score_color = "#e11d48"
+
+    # Opportunity badge color
+    opp_colors = {
+        "High Potential": "#059669",
+        "Metro First-Mover": "#4f46e5",
+        "Residential Sticky": "#7c3aed",
+        "Underserved": "#059669",
+    }
+    opp_color = "#4f46e5"
+    for k, v in opp_colors.items():
+        if k.lower() in rec_opp.lower():
+            opp_color = v
+            break
+
+    # ── Build strength cards ──
+    strength_cards = ""
+    for s in strengths:
+        s = _to_dict(s) if not isinstance(s, dict) else s
+        strength_cards += f"""
+        <div class="card strength-card">
+          <div class="card-icon">✦</div>
+          <h4>{s.get("factor", "")}</h4>
+          <p>{s.get("description", "")}</p>
+          <div class="evidence"><strong>Evidence:</strong> {s.get("evidence_from_analysis", "")}</div>
+        </div>"""
+
+    # ── Build concern cards ──
+    concern_cards = ""
+    for c in concerns:
+        c = _to_dict(c) if not isinstance(c, dict) else c
+        concern_cards += f"""
+        <div class="card concern-card">
+          <div class="card-icon">⚠</div>
+          <h4>{c.get("risk", "")}</h4>
+          <p>{c.get("description", "")}</p>
+          <div class="mitigation"><strong>Mitigation:</strong> {c.get("mitigation_strategy", "")}</div>
+        </div>"""
+
+    # ── Build alt cards ──
+    alt_cards = ""
+    for i, a in enumerate(alts):
+        a = _to_dict(a) if not isinstance(a, dict) else a
+        a_score = a.get("overall_score", 0)
+        alt_cards += f"""
+        <div class="card alt-card">
+          <div class="alt-rank">#{i + 2}</div>
+          <h4>{a.get("location_name", "")}</h4>
+          <div class="alt-area">{a.get("area", "")}</div>
+          <div class="alt-score" style="color:{score_color}">{a_score}/100</div>
+          <div class="alt-type">{a.get("opportunity_type", "")}</div>
+          <div class="alt-detail"><span class="tag-green">Strength:</span> {a.get("key_strength", "")}</div>
+          <div class="alt-detail"><span class="tag-red">Concern:</span> {a.get("key_concern", "")}</div>
+          <div class="alt-detail"><span class="tag-gray">Not #1:</span> {a.get("why_not_top", "")}</div>
+        </div>"""
+
+    # ── Build insight items ──
+    insight_items = ""
+    for ins in insights:
+        insight_items += f'<li class="insight-item">{ins}</li>\n'
+
+    # ── Build next-step items ──
+    step_items = ""
+    for idx, ns in enumerate(next_steps):
+        step_items += f'<li class="step-item"><span class="step-num">{idx + 1}</span>{ns}</li>\n'
+
+    # ── Competitor snapshot rows ──
+    comp_coords = comp.get("competitor_coordinates", [])
+    cci = comp.get("concentration_index_cci", 0)
+    req_daily = comp.get("req_daily_customers", 0)
+    feasibility = comp.get("feasibility_note", "")
+
+    # ── Market metrics ──
+    ldi = mkt.get("latent_demand_ldi", 0)
+    odi = mkt.get("observed_demand_odi", 0)
+    gap = mkt.get("conversion_gap", 0)
+    gap_label = "Blue Ocean (Underserved)" if gap > 0 else "Red Ocean (Oversaturated)"
+    gap_color = "#059669" if gap > 0 else "#e11d48"
+
+    # ── Assemble complete HTML ──
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Locus Intelligence Report — {business_type} in {target_location}</title>
+<style>
+  *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  html {{ scroll-behavior: smooth; }}
+  body {{
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #f8fafc; color: #1e293b; line-height: 1.6;
+  }}
+  .slide {{
+    min-height: 100vh; position: relative; padding: 3rem 2rem 5rem;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    page-break-after: always;
+  }}
+  .slide-inner {{ max-width: 1100px; width: 100%; }}
+  .slide-footer {{
+    position: absolute; bottom: 0; left: 0; width: 100%;
+    text-align: center; padding: 18px 0; font-size: 0.75rem;
+    font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase;
+    color: #475569;
+    background: linear-gradient(to top, rgba(248,250,252,0.95), transparent);
+    box-shadow: 0 -4px 20px rgba(99, 102, 241, 0.15);
+  }}
+  h1 {{ font-size: 2.5rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;
+       text-shadow: 0 0 40px rgba(79, 70, 229, 0.06); }}
+  h2 {{ font-size: 1.6rem; font-weight: 700; color: #334155; margin-bottom: 1.2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }}
+  h3 {{ font-size: 1.2rem; font-weight: 600; color: #475569; margin-bottom: 0.8rem; }}
+  h4 {{ font-size: 1rem; font-weight: 600; color: #1e293b; margin-bottom: 0.3rem; }}
+  .subtitle {{ font-size: 1.1rem; color: #64748b; margin-bottom: 2rem; }}
+  .card {{
+    background: #fff; border-radius: 12px; padding: 1.5rem;
+    box-shadow: 0 4px 24px -4px rgba(79, 70, 229, 0.08), 0 0 12px rgba(79, 70, 229, 0.04);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    margin-bottom: 1rem;
+  }}
+  .hero-stat {{
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 8px 32px -8px rgba(79, 70, 229, 0.12);
+    border-radius: 16px; padding: 2rem; text-align: center;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }}
+  .hero-stat .value {{ font-size: 3rem; font-weight: 800; }}
+  .hero-stat .label {{ font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.3rem; }}
+  .grid-2 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }}
+  .grid-3 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }}
+  .grid-4 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }}
+  .strength-card {{ border-left: 4px solid #059669; }}
+  .concern-card {{ border-left: 4px solid #e11d48; }}
+  .card-icon {{ font-size: 1.5rem; margin-bottom: 0.5rem; }}
+  .evidence, .mitigation {{ font-size: 0.85rem; color: #64748b; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9; }}
+  .badge {{
+    display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px;
+    font-size: 0.8rem; font-weight: 600; color: #fff;
+  }}
+  .stat-box {{ text-align: center; padding: 1.2rem; }}
+  .stat-box .val {{ font-size: 1.8rem; font-weight: 700; }}
+  .stat-box .lbl {{ font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }}
+  .alt-card {{ position: relative; overflow: hidden; }}
+  .alt-rank {{
+    position: absolute; top: 0; right: 0; background: #4f46e5; color: #fff;
+    font-weight: 700; font-size: 0.85rem; padding: 0.3rem 0.8rem;
+    border-radius: 0 12px 0 12px;
+  }}
+  .alt-area {{ font-size: 0.85rem; color: #64748b; margin-bottom: 0.3rem; }}
+  .alt-score {{ font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; }}
+  .alt-type {{ font-size: 0.8rem; color: #4f46e5; font-weight: 600; margin-bottom: 0.5rem; }}
+  .alt-detail {{ font-size: 0.85rem; color: #475569; margin-bottom: 0.3rem; }}
+  .tag-green {{ color: #059669; font-weight: 600; }}
+  .tag-red {{ color: #e11d48; font-weight: 600; }}
+  .tag-gray {{ color: #64748b; font-weight: 600; }}
+  .insight-item {{ margin-bottom: 0.8rem; padding-left: 0.5rem; border-left: 3px solid #4f46e5; }}
+  .step-item {{ display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 0.8rem; }}
+  .step-num {{
+    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+    background: #4f46e5; color: #fff; display: flex; align-items: center;
+    justify-content: center; font-weight: 700; font-size: 0.85rem;
+  }}
+  .gap-bar {{ height: 24px; border-radius: 12px; position: relative; overflow: hidden; background: #e2e8f0; }}
+  .gap-fill {{ height: 100%; border-radius: 12px; transition: width 0.8s ease; }}
+  .muted {{ font-size: 0.85rem; color: #64748b; }}
+  .cta-banner {{
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff; border-radius: 16px; padding: 2.5rem; text-align: center;
+    box-shadow: 0 8px 32px rgba(79, 70, 229, 0.3), 0 0 60px rgba(124, 58, 237, 0.15);
+    margin-top: 2rem;
+  }}
+  .cta-banner h3 {{ color: #fff; font-size: 1.4rem; margin-bottom: 0.8rem; border: none; }}
+  .cta-banner p {{ color: rgba(255,255,255,0.9); font-size: 0.95rem; }}
+  .disclaimer {{ font-size: 0.78rem; color: #94a3b8; line-height: 1.5; margin-top: 1.5rem; padding: 1rem; background: #f1f5f9; border-radius: 8px; }}
+  @media (max-width: 640px) {{
+    .slide {{ padding: 1.5rem 1rem 4rem; }}
+    h1 {{ font-size: 1.8rem; }}
+    .hero-stat .value {{ font-size: 2.2rem; }}
+    .grid-2, .grid-3, .grid-4 {{ grid-template-columns: 1fr; }}
+  }}
+</style>
+</head>
+<body>
+
+<!-- ═══ SLIDE 1: EXECUTIVE SUMMARY ═══ -->
+<section class="slide" style="background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);">
+  <div class="slide-inner" style="text-align:center;">
+    <div style="margin-bottom:1rem;">
+      <span class="badge" style="background:#4f46e5;">LOCUS INTELLIGENCE</span>
+    </div>
+    <h1>{business_type.title()} — {target_location}</h1>
+    <p class="subtitle">Location Intelligence Report · {analysis_date}</p>
+
+    <div class="grid-3" style="margin-top:2rem;">
+      <div class="hero-stat">
+        <div class="value" style="color:{score_color}">{rec_score}</div>
+        <div class="label">Organic RAV Score</div>
+      </div>
+      <div class="hero-stat">
+        <div class="value" style="color:#4f46e5">{rec_name}</div>
+        <div class="label">Top Recommendation</div>
+      </div>
+      <div class="hero-stat">
+        <div class="value" style="color:#475569">{total_competitors}</div>
+        <div class="label">Competitors Analyzed</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:2rem; text-align:left;">
+      <h3>Market Validation</h3>
+      <p>{market_validation}</p>
+    </div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 2: TOP RECOMMENDATION ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Top Recommendation — {rec_name}</h2>
+    <div class="grid-2" style="margin-bottom:1.5rem;">
+      <div class="card">
+        <div class="stat-box">
+          <div class="val" style="color:{score_color}">{rec_score}/100</div>
+          <div class="lbl">Overall Score</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="stat-box">
+          <div class="val" style="color:{opp_color}">{rec_opp}</div>
+          <div class="lbl">Opportunity Type</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="color:#059669">▲ Strengths</h3>
+    <div class="grid-2">{strength_cards}</div>
+
+    <h3 style="color:#e11d48; margin-top:1.5rem;">▼ Concerns</h3>
+    <div class="grid-2">{concern_cards}</div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 3: COMPETITION ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Structural Market Power — Competition</h2>
+    <div class="grid-4">
+      <div class="card stat-box">
+        <div class="val">{comp.get("total_competitors", 0)}</div>
+        <div class="lbl">Total Competitors</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{comp.get("density_per_km2", 0):.1f}</div>
+        <div class="lbl">Density / km²</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{comp.get("chain_dominance_pct", 0):.0f}%</div>
+        <div class="lbl">Chain Dominance</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{comp.get("avg_competitor_rating", 0):.1f}</div>
+        <div class="lbl">Avg Rating</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{comp.get("high_performers_count", 0)}</div>
+        <div class="lbl">High Performers (4.5+)</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{cci:.2f}</div>
+        <div class="lbl">Concentration Index (CCI)</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1.5rem;">
+      <h3>Required Daily Customers (Break-even Proxy)</h3>
+      <div style="font-size:2rem; font-weight:700; color:#4f46e5; margin:0.5rem 0;">{req_daily}</div>
+      <p class="muted">{feasibility}</p>
+      <div class="muted" style="margin-top:0.8rem; padding-top:0.8rem; border-top:1px solid #e2e8f0;">
+        <strong>How This Number Is Estimated:</strong> This is a structural proxy derived by scaling a baseline daily customer threshold against the zone's Estimated Rent Tier and Competitive Density (ODI). It serves as a directional break-even indicator, not an absolute financial projection.
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 4: MARKET PHYSICS ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Market Physics &amp; Financial Gap</h2>
+    <div class="grid-3">
+      <div class="card stat-box">
+        <div class="val" style="color:#4f46e5">{ldi:.2f}</div>
+        <div class="lbl">Latent Demand (LDI)</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val" style="color:#7c3aed">{odi:.2f}</div>
+        <div class="lbl">Observed Demand (ODI)</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val" style="color:{gap_color}">{gap:+.2f}</div>
+        <div class="lbl">Conversion Gap</div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h4>Demand Gap Visualization</h4>
+      <div style="margin:1rem 0;">
+        <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#64748b; margin-bottom:0.3rem;">
+          <span>LDI: {ldi:.2f}</span><span>ODI: {odi:.2f}</span>
+        </div>
+        <div class="gap-bar">
+          <div class="gap-fill" style="width:{min(ldi * 100, 100):.0f}%; background:#4f46e5;"></div>
+        </div>
+        <div class="gap-bar" style="margin-top:0.4rem;">
+          <div class="gap-fill" style="width:{min(odi * 100, 100):.0f}%; background:#7c3aed;"></div>
+        </div>
+      </div>
+      <div class="badge" style="background:{gap_color};">{gap_label}</div>
+    </div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 5: MARKET FUNDAMENTALS ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Market Fundamentals</h2>
+    <div class="grid-3">
+      <div class="card stat-box">
+        <div class="val">{mkt.get("population_density", "N/A")}</div>
+        <div class="lbl">Population Density</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{mkt.get("income_level", "N/A")}</div>
+        <div class="lbl">Income Level</div>
+      </div>
+      <div class="card stat-box">
+        <div class="val">{mkt.get("estimated_rent_tier", "N/A")}</div>
+        <div class="lbl">Estimated Rent Tier</div>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card">
+        <h4>Infrastructure Access</h4>
+        <p>{mkt.get("infrastructure_access", "N/A")}</p>
+      </div>
+      <div class="card">
+        <h4>Foot Traffic Pattern</h4>
+        <p>{mkt.get("foot_traffic_pattern", "N/A")}</p>
+      </div>
+    </div>
+    <div class="grid-2" style="margin-top:1rem;">
+      <div class="card">
+        <h4>Best Customer Segment</h4>
+        <p>{rec_segment}</p>
+      </div>
+      <div class="card">
+        <h4>Estimated Foot Traffic</h4>
+        <p>{rec_traffic}</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 6: ALTERNATIVES ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Alternative Locations</h2>
+    <div class="grid-2">{alt_cards if alt_cards else '<div class="card"><p class="muted">No alternative locations analyzed.</p></div>'}</div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 7: INSIGHTS & STRATEGY ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Key Insights &amp; Go-To-Market Strategy</h2>
+    <div class="card">
+      <h3>Strategic Insights</h3>
+      <ul style="list-style:none; padding:0;">{insight_items if insight_items else '<li class="muted">No insights available.</li>'}</ul>
+    </div>
+    <div class="card" style="margin-top:1rem;">
+      <h3>Actionable Next Steps</h3>
+      <ul style="list-style:none; padding:0;">{step_items if step_items else '<li class="muted">No steps defined.</li>'}</ul>
+    </div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+<!-- ═══ SLIDE 8: METHODOLOGY & DISCLAIMER ═══ -->
+<section class="slide">
+  <div class="slide-inner">
+    <h2>Methodology, Disclaimer &amp; Locus App</h2>
+    <div class="card">
+      <h3>Methodology</h3>
+      <p>{methodology}</p>
+    </div>
+
+    <div class="disclaimer">
+      <strong>LEGAL &amp; FINANCIAL DISCLAIMER:</strong> Insights are probabilistic and derived from localized data samples. Break-even figures and market physics (RAV, LDI, ODI) are estimations for strategic directional comparison only. Locus, a product of Intsemble, disclaims liability for capital-intensive decisions. Users must conduct independent, localized commercial and financial due diligence.
+    </div>
+
+    <div class="cta-banner">
+      <h3>This report provides a concise executive snapshot.</h3>
+      <p>For the complete interactive experience — including deep dives into granular Market Research with source-backed insights, live Competitor Mapping visualized on Google Maps, and Deep Gap Analysis powered by the Quantitative Leaderboard — return to the <strong>Locus App UI</strong>.</p>
+    </div>
+  </div>
+  <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
+</section>
+
+</body>
+</html>"""
+
+    return html
+
+
+# ─────────────────────────────────────────────────────────────────────
+# ADK Tool
+# ─────────────────────────────────────────────────────────────────────
 
 async def generate_html_report(
-    report_data: str, 
-    business_type: str, 
-    target_location: str, 
+    report_data: str,
+    business_type: str,
+    target_location: str,
     tool_context: ToolContext
 ) -> dict:
     """Generate a McKinsey/BCG style HTML executive report and save as artifact.
 
+    100% Python-templated: instant generation, zero Gemini API call,
+    zero SSE idle timeout risk.
+
     Args:
-        report_data: The strategic report data formatted by the agent.
+        report_data: The strategic report data formatted by the agent (used as fallback).
         business_type: The type of business (used for dynamic filename).
         target_location: The location analyzed (used for dynamic filename).
         tool_context: ADK ToolContext for saving artifacts.
     """
     try:
-        client = _create_genai_client()
         current_date = datetime.now().strftime("%Y-%m-%d")
 
-        # Create a clean, safe filename (e.g., Gym_Versova_Mumbai_Locus_Report.html)
+        # Create a clean, safe filename
         safe_biz = str(business_type).replace(" ", "_").replace("/", "-") if business_type else "Business"
         safe_loc = str(target_location).replace(" ", "_").replace("/", "-") if target_location else "Location"
         artifact_filename = f"{safe_biz}_{safe_loc}_Locus_Report.html"
 
-        prompt = f"""Generate a comprehensive, professional HTML report for a location intelligence analysis.
+        # ── Get structured report from state (set by StrategyAdvisorAgent output_key) ──
+        raw_report = tool_context.state.get("strategic_report", {})
+        report = _to_dict(raw_report)
 
-This report MUST be in the style of elite McKinsey/BCG consulting presentations, perfectly inheriting the 'Locus by Intsemble' UI theme (Slate, Indigo, White Glass, Soft Glows).
+        if not report:
+            logger.warning("strategic_report not found in state; returning error")
+            return {
+                "status": "error",
+                "error_message": "Strategic report data not found in pipeline state.",
+            }
 
-CRITICAL GUARDRAIL - ZERO HALLUCINATION:
-If a specific metric or list (like the Competitor List, Required Market Share, LDI, or CCI) is missing from the data provided, DO NOT invent numbers or names. OMIT that specific visual element or state "Data Insufficient for Calculation". Your credibility relies on absolute factual accuracy.
+        logger.info(f"Report Generator: Building Python-templated report for {business_type} in {target_location}")
 
-1. STRUCTURE - Create 8 distinct slides (full-screen sections, min-height: 100vh, position: relative):
+        # ── Generate HTML instantly via Python templates ──
+        html_code = _build_report_html(report, business_type or "", target_location or "")
 
-   SLIDE 1 - EXECUTIVE SUMMARY
-   - Large, prominent display of recommended location
-   - Business type and target location
-   - High-level market validation and Organic RAV Score
-
-   SLIDE 2 - TOP RECOMMENDATION DETAILS
-   - Strengths with evidence & Concerns with mitigations
-
-   SLIDE 3 - STRUCTURAL MARKET POWER (Competition)
-   - Competition metrics (total competitors, chain dominance, CCI)
-   - TRANSPARENCY REQUIREMENT: Add a "Competitor Data Snapshot" footer/subsection at the bottom of the slide. Display a clean, compact grid or list of the actual competitors used in this analysis. STRICTLY include only: Name, Rating, and Number of Reviews. Do not infer missing fields. If no specific competitor names are provided in the data, omit this subsection entirely.
-
-   SLIDE 4 - MARKET PHYSICS & FINANCIAL GAP
-   - Visually display Latent Demand (LDI) vs Observed Demand (ODI) and Conversion Gap
-   - Display Required Market Share and Demand Deficit warnings
-   - TRANSPARENCY REQUIREMENT: Directly beneath the "Required Daily Customers (Break-even Proxy)" metric, add a clearly labeled, small-text explanatory subsection titled "How This Number Is Estimated". Explain simply that this is a structural proxy derived by scaling a baseline daily customer threshold against the zone's Estimated Rent Tier and Competitive Density (ODI). DO NOT introduce new math, fabricated basket sizes, or specific dollar amounts.
-
-   SLIDE 5 - MARKET FUNDAMENTALS
-   - Population density, income level, rental costs in a grid
-
-   SLIDE 6 - ALTERNATIVE LOCATIONS
-   - Comparison cards with scores and pros/cons
-
-   SLIDE 7 - KEY INSIGHTS & GO-TO-MARKET ATTACK STRATEGY
-   - Strategic insights and actionable next steps
-
-   SLIDE 8 - METHODOLOGY, DISCLAIMER & THE LOCUS APP CTA
-   - Methodology of the analysis
-   - The Legal Disclaimer (provided in section 3 below)
-   - A VISUALLY DOMINANT CALL-TO-ACTION (CTA) section. This CTA must be the visual centerpiece of the slide — large, eye-catching, and impossible to miss. Design it as a premium card or banner with a strong indigo-to-purple gradient background, large bold white text, and a glowing border or shadow. The CTA text should communicate: "This report provides a concise executive snapshot.
-
-For the complete interactive experience, including deep dives into granular Market Research with source-backed insights, live Competitor Mapping visualized on Google Maps and Deep Gap Analysis powered by the Quantitative Leaderboard, return to the Locus App UI.
-
-2. DESIGN & CSS REQUIREMENTS (The Intsemble Theme):
-   - Palette: Slate backgrounds (#f8fafc), crisp white cards, Indigo accents (#4f46e5), Emerald for positives (#059669), Rose for risks (#e11d48).
-   - Clean sans-serif typography: font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif.
-   
-   GLOBAL SOFT GLOWS (Premium Locus Feel):
-   - Apply a subtle, premium soft indigo glow to ALL content cards throughout the report. Use: `box-shadow: 0 4px 24px -4px rgba(79, 70, 229, 0.08), 0 0 12px rgba(79, 70, 229, 0.04); border: 1px solid rgba(226, 232, 240, 0.8);`
-   - Apply a slightly stronger glow to slide headers/titles: `text-shadow: 0 0 40px rgba(79, 70, 229, 0.06);`
-   - Apply a glowing highlight to hero stat numbers (RAV scores, LDI, etc.): `box-shadow: 0 8px 32px -8px rgba(79, 70, 229, 0.12); background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);`
-   - Keep all glows subtle and professional — this is a consulting document, not a gaming UI.
-   
-   PER-SLIDE FOOTER (replaces any floating watermark):
-   - DO NOT create any fixed/floating watermark elements (no `.locus-watermark`, no `position: fixed` watermarks).
-   - Instead, at the absolute bottom of EVERY slide section (inside each slide div, as the last child), add a footer div with the text: "LOCUS | A PRODUCT BY INTSEMBLE".
-   - Style this footer to be dominant but elegant: `position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; padding: 18px 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: #475569; background: linear-gradient(to top, rgba(248,250,252,0.95), transparent); box-shadow: 0 -4px 20px rgba(99, 102, 241, 0.15);`
-   - This footer must appear on every single slide consistently.
-   
-   RESPONSIVE & CAPTIVATING LAYOUT:
-   - The entire report must be visually captivating — use generous white space, elegant transitions between sections, and clean visual hierarchy.
-   - Ensure the report renders beautifully on mobile devices and edge browsers: use relative units (rem, %, vw), `max-width: 100%` on images/tables, and CSS Grid/Flexbox with `flex-wrap: wrap`.
-   - Each slide should have `padding-bottom: 60px` to account for the footer.
-   - Smooth scroll behavior: `html {{ scroll-behavior: smooth; }}`
-   
-   Explainers/Notes: Style the "How This Number Is Estimated" and "Competitor Snapshot" subsections with muted text (color: #64748b; font-size: 0.85rem) so they provide transparency without visual clutter.
-
-3. REQUIRED DISCLAIMER TEXT (Place on Slide 8):
-   "LEGAL & FINANCIAL DISCLAIMER: Insights are probabilistic and derived from localized data samples. Break-even figures and market physics (RAV, LDI, ODI) are estimations for strategic directional comparison only. Locus, a product of Intsemble, disclaims liability for capital-intensive decisions. Users must conduct independent, localized commercial and financial due diligence."
-
-4. DATA TO INCLUDE (USE EXACTLY THIS DATA):
-{report_data}
-
-5. OUTPUT:
-   - Generate ONLY the complete HTML code (<!DOCTYPE html> to </html>).
-   - NO markdown code fences (do not output ```html).
-"""
-
-        logger.info("Generating HTML report using Gemini...")
-
-        @retry(
-            stop=stop_after_attempt(3),
-            wait=wait_exponential(multiplier=2, min=2, max=30),
-            retry=retry_if_exception_type(ServerError),
-            before_sleep=lambda retry_state: logger.warning(
-                f"Gemini API error, retrying in {retry_state.next_action.sleep} seconds... "
-                f"(attempt {retry_state.attempt_number}/3)"
-            ),
-        )
-        def generate_with_retry():
-            return client.models.generate_content(
-                model=MID_MODEL,
-                contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.2), # Dropped temp to ensure CSS/Structure stays flawless and limits hallucination
-            )
-
-        response = generate_with_retry()
-        html_code = response.text
-
-        # Strip markdown code fences if present
-        if html_code.startswith("```"):
-            if html_code.startswith("```html") or html_code.startswith("```HTML"):
-                html_code = html_code[7:]
-            else:
-                html_code = html_code[3:]
-            if html_code.rstrip().endswith("```"):
-                html_code = html_code.rstrip()[:-3]
-        html_code = html_code.strip()
-
-        if not html_code.startswith("<!DOCTYPE") and not html_code.startswith("<html"):
-            logger.warning("Generated content may not be valid HTML")
-
+        # ── Save artifact ──
         html_artifact = types.Part.from_bytes(
             data=html_code.encode('utf-8'),
             mime_type="text/html"
@@ -182,6 +549,7 @@ For the complete interactive experience, including deep dives into granular Mark
             artifact=html_artifact
         )
 
+        # ── Save to state for frontend display ──
         tool_context.state["html_report_content"] = html_code
 
         logger.info(f"Saved HTML report artifact: {artifact_filename} (version {version})")
@@ -200,221 +568,3 @@ For the complete interactive experience, including deep dives into granular Mark
             "status": "error",
             "error_message": f"Failed to generate HTML report: {str(e)}",
         }
-
-
-
-
-
-
-
-
-
-
-
-# """HTML Report Generator tool for creating executive reports.
-
-# Uses direct text generation (same as original notebook Part 4) to create
-# McKinsey/BCG style 7-slide HTML presentations from strategic report data.
-# Saves the generated HTML as an artifact for download in adk web.
-# """
-
-# import logging
-# from datetime import datetime
-# from google.adk.tools import ToolContext
-# from google.genai import types
-# from google.genai.errors import ServerError
-# from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-# from ..config import PRO_MODEL
-
-# logger = logging.getLogger("LocationStrategyPipeline")
-
-
-# async def generate_html_report(report_data: str, tool_context: ToolContext) -> dict:
-#     """Generate a McKinsey/BCG style HTML executive report and save as artifact.
-
-#     This tool creates a professional 7-slide HTML presentation from the
-#     location intelligence report data using direct text generation with Gemini.
-#     The generated HTML is automatically saved as an artifact for viewing in adk web.
-
-#     Args:
-#         report_data: The strategic report data in a formatted string containing
-#                     analysis overview, top recommendation, competition metrics,
-#                     market characteristics, alternatives, insights, and methodology.
-#         tool_context: ADK ToolContext for saving artifacts.
-
-#     Returns:
-#         dict: A dictionary containing:
-#             - status: "success" or "error"
-#             - message: Status message
-#             - artifact_filename: Name of saved artifact (if successful)
-#             - artifact_version: Version number of artifact (if successful)
-#             - html_length: Character count of generated HTML
-#             - error_message: Error details (if failed)
-#     """
-#     try:
-#         from google import genai
-
-#         # Initialize client (uses GOOGLE_API_KEY from env)
-#         client = genai.Client()
-
-#         current_date = datetime.now().strftime("%Y-%m-%d")
-
-#         # Comprehensive prompt for multi-slide HTML generation
-#         # Adapted from original notebook Part 4
-#         prompt = f"""Generate a comprehensive, professional HTML report for a location intelligence analysis.
-
-# This report should be in the style of McKinsey/BCG consulting presentations:
-# - Multi-slide format using full-screen scrollable sections
-# - Modern, clean, executive-ready design
-# - Data-driven visualizations
-# - Professional color scheme and typography
-
-# CRITICAL REQUIREMENTS:
-
-# 1. STRUCTURE - Create 7 distinct slides (full-screen sections):
-
-#    SLIDE 1 - EXECUTIVE SUMMARY & TOP RECOMMENDATION
-#    - Large, prominent display of recommended location and score
-#    - Business type and target location
-#    - High-level market validation
-#    - Eye-catching hero section
-
-#    SLIDE 2 - TOP RECOMMENDATION DETAILS
-#    - All strengths with evidence (cards/boxes)
-#    - All concerns with mitigation strategies
-#    - Opportunity type and target customer segment
-
-#    SLIDE 3 - COMPETITION ANALYSIS
-#    - Competition metrics (total competitors, density, chain dominance)
-#    - Visual representation of key numbers (large stat boxes)
-#    - Average ratings, high performers count
-
-#    SLIDE 4 - MARKET CHARACTERISTICS
-#    - Population density, income level, infrastructure
-#    - Foot traffic patterns, rental costs
-#    - Grid/card layout for each characteristic
-
-#    SLIDE 5 - ALTERNATIVE LOCATIONS
-#    - Each alternative in a comparison card
-#    - Scores, opportunity types, strengths/concerns
-#    - Why each is not the top choice
-
-#    SLIDE 6 - KEY INSIGHTS & NEXT STEPS
-#    - Strategic insights (bullet points or cards)
-#    - Actionable next steps (numbered list)
-
-#    SLIDE 7 - METHODOLOGY
-#    - How the analysis was performed
-#    - Data sources and approach
-
-# 2. DESIGN:
-#    - Use professional consulting color palette:
-#      * Primary: Navy blue (#1e3a8a, #3b82f6) for headers/trust
-#      * Success: Green (#059669, #10b981) for positive metrics
-#      * Warning: Amber (#d97706, #f59e0b) for concerns
-#      * Neutral: Grays (#6b7280, #e5e7eb) for backgrounds
-#    - Modern sans-serif fonts (system: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto)
-#    - Cards with subtle shadows and rounded corners
-#    - Generous white space and padding
-#    - Responsive grid layouts
-
-# 3. TECHNICAL:
-#    - Self-contained: ALL CSS embedded in <style> tag
-#    - No external dependencies (no CDNs, no external images)
-#    - Each slide: min-height: 100vh; page-break-after: always;
-#    - Smooth scroll behavior
-#    - Print-friendly
-
-# 4. DATA TO INCLUDE (use EXACTLY this data, DO NOT INVENT):
-
-# {report_data}
-
-# 5. OUTPUT:
-#    - Generate ONLY the complete HTML code
-#    - Start with <!DOCTYPE html>
-#    - End with </html>
-#    - NO explanations before or after the HTML
-#    - NO markdown code fences
-
-# Make it visually stunning, data-rich, and executive-ready.
-
-# Current date: {current_date}
-# """
-
-#         logger.info("Generating HTML report using Gemini...")
-
-#         # Retry wrapper for handling model overload errors
-#         @retry(
-#             stop=stop_after_attempt(3),
-#             wait=wait_exponential(multiplier=2, min=2, max=30),
-#             retry=retry_if_exception_type(ServerError),
-#             before_sleep=lambda retry_state: logger.warning(
-#                 f"Gemini API error, retrying in {retry_state.next_action.sleep} seconds... "
-#                 f"(attempt {retry_state.attempt_number}/3)"
-#             ),
-#         )
-#         def generate_with_retry():
-#             return client.models.generate_content(
-#                 model=PRO_MODEL,
-#                 contents=prompt,
-#                 config=types.GenerateContentConfig(temperature=1.0),
-#             )
-
-#         # Direct text generation (NOT code execution)
-#         # Same as original notebook: types.GenerateContentConfig(temperature=1.0)
-#         response = generate_with_retry()
-
-#         # Extract HTML from response.text
-#         html_code = response.text
-#         # Strip markdown code fences if present
-#         if html_code.startswith("```"):
-#             # Remove opening fence (```html or ```)
-#             if html_code.startswith("```html"):
-#                 html_code = html_code[7:]
-#             elif html_code.startswith("```HTML"):
-#                 html_code = html_code[7:]
-#             else:
-#                 html_code = html_code[3:]
-
-#             # Remove closing fence
-#             if html_code.rstrip().endswith("```"):
-#                 html_code = html_code.rstrip()[:-3]
-
-#             html_code = html_code.strip()
-
-#         # Validate we got HTML
-#         if not html_code.strip().startswith("<!DOCTYPE") and not html_code.strip().startswith("<html"):
-#             logger.warning("Generated content may not be valid HTML")
-
-#         # Save as artifact with proper MIME type so it appears in ADK web UI
-#         html_artifact = types.Part.from_bytes(
-#             data=html_code.encode('utf-8'),
-#             mime_type="text/html"
-#         )
-#         artifact_filename = "executive_report.html"
-
-#         version = await tool_context.save_artifact(
-#             filename=artifact_filename,
-#             artifact=html_artifact
-#         )
-
-#         # Also store in state for AG-UI frontend display
-#         tool_context.state["html_report_content"] = html_code
-
-#         logger.info(f"Saved HTML report artifact: {artifact_filename} (version {version})")
-
-#         return {
-#             "status": "success",
-#             "message": f"HTML report generated and saved as artifact '{artifact_filename}'",
-#             "artifact_filename": artifact_filename,
-#             "artifact_version": version,
-#             "html_length": len(html_code),
-#         }
-
-#     except Exception as e:
-#         logger.error(f"Failed to generate HTML report: {e}")
-#         return {
-#             "status": "error",
-#             "error_message": f"Failed to generate HTML report: {str(e)}",
-#         }
