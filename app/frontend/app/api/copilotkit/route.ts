@@ -50,11 +50,6 @@ import { LangGraphHttpAgent } from "@copilotkit/runtime/langgraph";
 
 export const runtime = "nodejs";
 
-// Allow streaming to stay alive for the full pipeline duration (3-5 min).
-// Without this, Vercel's default 60s timeout kills the connection before
-// the report generation (last stage) can deliver its state delta.
-export const maxDuration = 300; // 5 minutes (max for Pro tier)
-
 // 1. Use Empty Adapter (The backend handles the intelligence)
 const serviceAdapter = new ExperimentalEmptyAdapter();
 
