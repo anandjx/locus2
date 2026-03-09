@@ -167,93 +167,186 @@ def _build_report_html(report: dict, business_type: str, target_location: str) -
   *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
   html {{ scroll-behavior: smooth; }}
   body {{
-    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: #f8fafc; color: #1e293b; line-height: 1.6;
+    font-family: 'Inter', 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    background: #f8fafc; color: #0f172a; line-height: 1.65;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
   }}
+
+  /* ── SLIDE LAYOUT ── */
   .slide {{
-    min-height: 100vh; position: relative; padding: 3rem 2rem 5rem;
+    min-height: 100vh; position: relative; padding: 3.5rem 2rem 5.5rem;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     page-break-after: always;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 80%, rgba(99,102,241,0.04), transparent),
+      radial-gradient(ellipse 60% 40% at 85% 15%, rgba(124,58,237,0.03), transparent);
   }}
-  .slide-inner {{ max-width: 1100px; width: 100%; }}
-  .slide-footer {{
-    position: absolute; bottom: 0; left: 0; width: 100%;
-    text-align: center; padding: 18px 0; font-size: 0.75rem;
-    font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase;
-    color: #475569;
-    background: linear-gradient(to top, rgba(248,250,252,0.95), transparent);
-    box-shadow: 0 -4px 20px rgba(99, 102, 241, 0.15);
-  }}
-  h1 {{ font-size: 2.5rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;
-       text-shadow: 0 0 40px rgba(79, 70, 229, 0.06); }}
-  h2 {{ font-size: 1.6rem; font-weight: 700; color: #334155; margin-bottom: 1.2rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }}
-  h3 {{ font-size: 1.2rem; font-weight: 600; color: #475569; margin-bottom: 0.8rem; }}
-  h4 {{ font-size: 1rem; font-weight: 600; color: #1e293b; margin-bottom: 0.3rem; }}
-  .subtitle {{ font-size: 1.1rem; color: #64748b; margin-bottom: 2rem; }}
+  .slide-inner {{ max-width: 1100px; width: 100%; z-index: 2; }}
+
+  /* ── PREMIUM GLASSMORPHISM FOOTER — brushed steel + glass ── */
+ .slide-footer {{
+  position: absolute; bottom: 0; left: 0; width: 100%; z-index: 10;
+  text-align: center; padding: 20px 0; font-size: 0.78rem;
+  font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase;
+
+  background-image: linear-gradient(
+    180deg,
+    #f8fafc 0%,
+    #e2e8f0 40%,
+    #cbd5f5 70%,
+    #ffffff 100%
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  filter: drop-shadow(0 0 3px rgba(148,163,184,0.12));
+}}
+
+.slide-footer::before {{
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+
+  backdrop-filter: blur(12px) saturate(1.4);
+
+  background: linear-gradient(
+    to top,
+    rgba(255,255,255,0.35),
+    rgba(255,255,255,0.05)
+  );
+
+  border-top: 1px solid rgba(255,255,255,0.6);
+
+  box-shadow: 0 -4px 12px rgba(99,102,241,0.04);
+}}
+
+  /* ── TYPOGRAPHY ── */
+  h1 {{ font-size: 2.8rem; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem;
+       letter-spacing: -0.025em; text-shadow: 0 4px 32px rgba(79,70,229,0.1); }}
+  h2 {{ font-size: 1.65rem; font-weight: 700; color: #1e293b; margin-bottom: 1.2rem;
+       border-bottom: 2px solid rgba(226,232,240,0.7); padding-bottom: 0.5rem; letter-spacing: -0.01em; }}
+  h3 {{ font-size: 1.2rem; font-weight: 700; color: #334155; margin-bottom: 0.8rem; }}
+  h4 {{ font-size: 1.05rem; font-weight: 600; color: #0f172a; margin-bottom: 0.3rem; }}
+  .subtitle {{ font-size: 1.1rem; font-weight: 500; color: #64748b; margin-bottom: 2rem; letter-spacing: 0.02em; }}
+
+  /* ── CARDS — layered glass shadows ── */
   .card {{
-    background: #fff; border-radius: 12px; padding: 1.5rem;
-    box-shadow: 0 4px 24px -4px rgba(79, 70, 229, 0.08), 0 0 12px rgba(79, 70, 229, 0.04);
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: rgba(255,255,255,0.88); border-radius: 16px; padding: 1.6rem;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    box-shadow:
+      0 1px 3px rgba(15,23,42,0.04),
+      0 6px 24px -4px rgba(79,70,229,0.07),
+      0 16px 56px -12px rgba(79,70,229,0.05);
+    border: 1px solid rgba(255,255,255,0.9);
     margin-bottom: 1rem;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
   }}
+  .card:hover {{
+    transform: translateY(-2px);
+    box-shadow:
+      0 2px 6px rgba(15,23,42,0.05),
+      0 10px 36px -6px rgba(79,70,229,0.1),
+      0 24px 72px -16px rgba(79,70,229,0.08);
+  }}
+
+  /* ── HERO STATS — frosted glass ── */
   .hero-stat {{
-    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-    box-shadow: 0 8px 32px -8px rgba(79, 70, 229, 0.12);
-    border-radius: 16px; padding: 2rem; text-align: center;
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,0.92) 100%);
+    box-shadow:
+      0 8px 32px -8px rgba(79,70,229,0.14),
+      inset 0 1px 0 rgba(255,255,255,1),
+      0 0 0 1px rgba(226,232,240,0.5);
+    border-radius: 20px; padding: 2.2rem; text-align: center;
+    border: none;
   }}
-  .hero-stat .value {{ font-size: 3rem; font-weight: 800; }}
-  .hero-stat .label {{ font-size: 0.85rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.3rem; }}
-  .grid-2 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }}
-  .grid-3 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }}
-  .grid-4 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }}
-  .strength-card {{ border-left: 4px solid #059669; }}
-  .concern-card {{ border-left: 4px solid #e11d48; }}
-  .card-icon {{ font-size: 1.5rem; margin-bottom: 0.5rem; }}
-  .evidence, .mitigation {{ font-size: 0.85rem; color: #64748b; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9; }}
+  .hero-stat .value {{ font-size: 3.2rem; font-weight: 800; letter-spacing: -0.03em;
+       text-shadow: 0 2px 12px rgba(0,0,0,0.04); }}
+  .hero-stat .label {{ font-size: 0.82rem; font-weight: 600; color: #64748b;
+       text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.6rem; }}
+
+  /* ── GRIDS ── */
+  .grid-2 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; }}
+  .grid-3 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; }}
+  .grid-4 {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.2rem; }}
+
+  /* ── ACCENT CARDS ── */
+  .strength-card {{ border-left: 4px solid #10b981; }}
+  .concern-card {{ border-left: 4px solid #f43f5e; }}
+  .card-icon {{ font-size: 1.6rem; margin-bottom: 0.5rem; text-shadow: 0 2px 6px rgba(0,0,0,0.08); }}
+  .evidence, .mitigation {{ font-size: 0.85rem; color: #475569; margin-top: 0.6rem; padding-top: 0.6rem; border-top: 1px solid rgba(241,245,249,0.8); }}
+
+  /* ── BADGES ── */
   .badge {{
-    display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px;
+    display: inline-block; padding: 0.3rem 0.85rem; border-radius: 9999px;
     font-size: 0.8rem; font-weight: 600; color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }}
-  .stat-box {{ text-align: center; padding: 1.2rem; }}
-  .stat-box .val {{ font-size: 1.8rem; font-weight: 700; }}
-  .stat-box .lbl {{ font-size: 0.78rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; }}
+
+  /* ── STAT BOXES ── */
+  .stat-box {{ text-align: center; padding: 1.4rem; }}
+  .stat-box .val {{ font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }}
+  .stat-box .lbl {{ font-size: 0.78rem; font-weight: 600; color: #64748b;
+       text-transform: uppercase; letter-spacing: 0.08em; margin-top: 0.3rem; }}
+
+  /* ── ALTERNATIVES ── */
   .alt-card {{ position: relative; overflow: hidden; }}
   .alt-rank {{
-    position: absolute; top: 0; right: 0; background: #4f46e5; color: #fff;
-    font-weight: 700; font-size: 0.85rem; padding: 0.3rem 0.8rem;
-    border-radius: 0 12px 0 12px;
+    position: absolute; top: 0; right: 0;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: #fff;
+    font-weight: 800; font-size: 0.9rem; padding: 0.4rem 1rem;
+    border-radius: 0 16px 0 16px; box-shadow: -2px 2px 10px rgba(79,70,229,0.2);
   }}
-  .alt-area {{ font-size: 0.85rem; color: #64748b; margin-bottom: 0.3rem; }}
-  .alt-score {{ font-size: 1.5rem; font-weight: 700; margin: 0.5rem 0; }}
-  .alt-type {{ font-size: 0.8rem; color: #4f46e5; font-weight: 600; margin-bottom: 0.5rem; }}
-  .alt-detail {{ font-size: 0.85rem; color: #475569; margin-bottom: 0.3rem; }}
-  .tag-green {{ color: #059669; font-weight: 600; }}
-  .tag-red {{ color: #e11d48; font-weight: 600; }}
-  .tag-gray {{ color: #64748b; font-weight: 600; }}
-  .insight-item {{ margin-bottom: 0.8rem; padding-left: 0.5rem; border-left: 3px solid #4f46e5; }}
-  .step-item {{ display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 0.8rem; }}
+  .alt-area {{ font-size: 0.85rem; font-weight: 500; color: #64748b; margin-bottom: 0.4rem; }}
+  .alt-score {{ font-size: 1.8rem; font-weight: 800; margin: 0.5rem 0; letter-spacing: -0.02em; }}
+  .alt-type {{ font-size: 0.85rem; color: #4f46e5; font-weight: 700; margin-bottom: 0.5rem; }}
+  .alt-detail {{ font-size: 0.85rem; color: #334155; margin-bottom: 0.35rem; }}
+  .tag-green {{ color: #10b981; font-weight: 700; }}
+  .tag-red {{ color: #f43f5e; font-weight: 700; }}
+  .tag-gray {{ color: #64748b; font-weight: 700; }}
+
+  /* ── INSIGHTS & STEPS ── */
+  .insight-item {{ margin-bottom: 0.8rem; padding-left: 0.8rem; border-left: 3px solid #6366f1; font-weight: 500; }}
+  .step-item {{ display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; font-weight: 500; }}
   .step-num {{
-    flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
-    background: #4f46e5; color: #fff; display: flex; align-items: center;
-    justify-content: center; font-weight: 700; font-size: 0.85rem;
+    flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(79,70,229,0.25);
   }}
-  .gap-bar {{ height: 24px; border-radius: 12px; position: relative; overflow: hidden; background: #e2e8f0; }}
-  .gap-fill {{ height: 100%; border-radius: 12px; transition: width 0.8s ease; }}
+
+  /* ── CHARTS ── */
+  .gap-bar {{ height: 24px; border-radius: 9999px; position: relative; overflow: hidden;
+       background: #e2e8f0; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05); }}
+  .gap-fill {{ height: 100%; border-radius: 9999px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }}
   .muted {{ font-size: 0.85rem; color: #64748b; }}
+
+  /* ── CTA BANNER — neon indigo ── */
   .cta-banner {{
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-    color: #fff; border-radius: 16px; padding: 2.5rem; text-align: center;
-    box-shadow: 0 8px 32px rgba(79, 70, 229, 0.3), 0 0 60px rgba(124, 58, 237, 0.15);
-    margin-top: 2rem;
+    color: #fff; border-radius: 20px; padding: 3rem; text-align: center;
+    box-shadow:
+      0 10px 40px rgba(79,70,229,0.3),
+      0 0 80px rgba(124,58,237,0.12),
+      inset 0 1px 1px rgba(255,255,255,0.25);
+    margin-top: 2rem; border: 1px solid rgba(255,255,255,0.1);
   }}
-  .cta-banner h3 {{ color: #fff; font-size: 1.4rem; margin-bottom: 0.8rem; border: none; }}
-  .cta-banner p {{ color: rgba(255,255,255,0.9); font-size: 0.95rem; }}
-  .disclaimer {{ font-size: 0.78rem; color: #94a3b8; line-height: 1.5; margin-top: 1.5rem; padding: 1rem; background: #f1f5f9; border-radius: 8px; }}
+  .cta-banner h3 {{ color: #fff; font-size: 1.5rem; font-weight: 800; margin-bottom: 0.8rem;
+       border: none; text-shadow: 0 2px 8px rgba(0,0,0,0.15); }}
+  .cta-banner p {{ color: rgba(255,255,255,0.92); font-size: 1rem; line-height: 1.6; }}
+
+  /* ── DISCLAIMER ── */
+  .disclaimer {{ font-size: 0.78rem; color: #64748b; line-height: 1.6; margin-top: 1.5rem;
+       padding: 1.2rem; background: rgba(241,245,249,0.8); border-radius: 12px;
+       border: 1px solid rgba(226,232,240,0.6); backdrop-filter: blur(4px); }}
+
+  /* ── RESPONSIVE ── */
   @media (max-width: 640px) {{
-    .slide {{ padding: 1.5rem 1rem 4rem; }}
-    h1 {{ font-size: 1.8rem; }}
-    .hero-stat .value {{ font-size: 2.2rem; }}
+    .slide {{ padding: 1.5rem 1rem 4.5rem; }}
+    h1 {{ font-size: 2rem; }}
+    .hero-stat .value {{ font-size: 2.4rem; }}
     .grid-2, .grid-3, .grid-4 {{ grid-template-columns: 1fr; }}
   }}
 </style>
