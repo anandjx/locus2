@@ -182,11 +182,11 @@ It usually takes about **3 minutes to 5 minutes** after confirmation of the loca
             <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
               <span>© {new Date().getFullYear()} Intsemble</span>
               <span className="text-slate-200">·</span>
-              <Link href="/terms" className="hover:text-slate-600 transition-colors underline-offset-2 hover:underline">
+              <Link href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors underline-offset-2 hover:underline">
                 Terms
               </Link>
               <span className="text-slate-200">·</span>
-              <Link href="/privacy" className="hover:text-slate-600 transition-colors underline-offset-2 hover:underline">
+              <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-slate-600 transition-colors underline-offset-2 hover:underline">
                 Privacy
               </Link>
             </div>

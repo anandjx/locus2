@@ -158,7 +158,7 @@ export default function TermsOfService() {
                         <p>
                             These Terms shall be governed by and construed in accordance with the laws of India,
                             without regard to its conflict of law provisions. Any disputes arising under these Terms
-                            shall be subject to the exclusive jurisdiction of the courts in Pune, Maharashtra.
+                            shall be subject to the exclusive jurisdiction of the courts in Guwahati, Assam.
                         </p>
                     </Section>
 
