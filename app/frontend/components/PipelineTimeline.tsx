@@ -9,11 +9,11 @@ import { StaticMapCard } from "./StaticMapCard";
 /* Each step gets a unique accent color matching the CollapsibleStep color map */
 const TIMELINE_STEPS: (TimelineStepConfig & { accent: string })[] = [
   { id: "intake", label: "Parsed", stageKey: "intake", tool: null, accent: "blue" },
-  { id: "market_research", label: "Market", stageKey: "market_research", tool: { icon: "🔍", name: "google_search" }, accent: "emerald" },
-  { id: "competitor_mapping", label: "Competitors", stageKey: "competitor_mapping", tool: { icon: "📍", name: "search_places" }, accent: "orange" },
-  { id: "gap_analysis", label: "Gap", stageKey: "gap_analysis", tool: { icon: "🐍", name: "python_code" }, accent: "purple" },
-  { id: "strategy_synthesis", label: "Strategy", stageKey: "strategy_synthesis", tool: { icon: "🧠", name: "deep_thinking" }, accent: "rose" },
-  { id: "report_generation", label: "Report", stageKey: "report_generation", tool: { icon: "📄", name: "html_report" }, accent: "indigo" },
+  { id: "market_research", label: "Market", stageKey: "market_research", tool: { icon: "🔍", name: "Deep Market Research" }, accent: "emerald" },
+  { id: "competitor_mapping", label: "Competitors", stageKey: "competitor_mapping", tool: { icon: "📍", name: "Ground-Level Competitor Assessment" }, accent: "orange" },
+  { id: "gap_analysis", label: "Gap", stageKey: "gap_analysis", tool: { icon: "🐍", name: "Analytical Gap Evaluation" }, accent: "purple" },
+  { id: "strategy_synthesis", label: "Strategy", stageKey: "strategy_synthesis", tool: { icon: "🧠", name: "Strategic Deep Dive" }, accent: "rose" },
+  { id: "report_generation", label: "Report", stageKey: "report_generation", tool: { icon: "📄", name: "Comprehensive Report Generation" }, accent: "indigo" },
 ];
 
 /* Steps that render side-by-side in 63/37 columns */

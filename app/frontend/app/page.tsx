@@ -95,12 +95,12 @@ It usually takes about **3 minutes to 5 minutes** after confirmation of the loca
             <header className="mb-8 animate-fade-in">
               <div className="flex items-end justify-between gap-4">
                 <div>
-                  <h1 className="text-6xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
+                  <h1 className="text-7xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-100 to-cyan-600">
                     {AGENT_CONFIG.productName}
                   </h1>
                   <p className="text-slate-600 text-lg">
                     {AGENT_CONFIG.tagline}
-                    <span className="mx-2 text-slate-300">|</span>
+                    <span className="mx-2 text-slate-100">|</span>
                     A product by{" "}
                     <span className="font-medium text-slate-600">
                       {AGENT_CONFIG.company}

@@ -22,11 +22,17 @@ def _create_genai_client():
     from google import genai
 
     if os.environ.get("GOOGLE_GENAI_USE_VERTEXAI", "FALSE").upper() == "TRUE":
-        logger.info("Initializing genai.Client in Vertex AI mode")
+        # genai.Client needs a real compute region for model API calls.
+        # "global" works for vertexai.init() (ADK routing) but NOT for direct
+        # model generation endpoints. Fall back to us-central1.
+        raw_location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+        api_location = "us-central1" if raw_location.lower() == "global" else raw_location
+
+        logger.info(f"Initializing genai.Client in Vertex AI mode (location={api_location})")
         return genai.Client(
             vertexai=True,
             project=os.environ.get("GOOGLE_CLOUD_PROJECT"),
-            location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+            location=api_location,
         )
     else:
         logger.info("Initializing genai.Client in API Key mode")
