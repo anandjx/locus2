@@ -12,7 +12,7 @@ from google.genai import types
 from google.genai.errors import ServerError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
-from ..config import PRO_MODEL
+from ..config import MID_MODEL
 
 logger = logging.getLogger("LocationStrategyPipeline")
 
@@ -151,7 +151,7 @@ For the complete interactive experience, including deep dives into granular Mark
         )
         def generate_with_retry():
             return client.models.generate_content(
-                model=PRO_MODEL,
+                model=MID_MODEL,
                 contents=prompt,
                 config=types.GenerateContentConfig(temperature=0.2), # Dropped temp to ensure CSS/Structure stays flawless and limits hallucination
             )

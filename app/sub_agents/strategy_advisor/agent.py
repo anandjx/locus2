@@ -80,7 +80,7 @@ strategy_advisor_agent = LlmAgent(
     planner=BuiltInPlanner(
         thinking_config=ThinkingConfig(
             include_thoughts=False,  
-            thinking_budget=-1,  
+            thinking_budget=16384,  # ~30-40s thinking; prevents SSE idle timeout on cloud
         )
     ),
     output_schema=LocationIntelligenceReport,
