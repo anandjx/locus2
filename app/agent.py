@@ -35,7 +35,9 @@ Usage:
 
 from google.adk.agents import SequentialAgent
 from google.adk.agents.llm_agent import Agent
+from google.adk.models.llm_response import LlmResponse
 from google.adk.tools.agent_tool import AgentTool
+from google.genai import types as genai_types
 
 
 from .sub_agents.intake_agent.agent import intake_agent
@@ -76,6 +78,47 @@ including JSON report and HTML report.
     ],
 )
 
+def _auto_transfer_callback(callback_context, llm_request):
+    """Programmatically transfer to pipeline after IntakeAgent completes.
+
+    When the LLM calls transfer_to_agent through the normal flow, ag_ui_adk
+    adds a 'default_api.' namespace prefix that causes a ValueError.
+    This callback bypasses the LLM entirely: after IntakeAgent sets
+    target_location and business_type in state, we intercept the next
+    model call and inject the transfer_to_agent function call directly.
+
+    This means:
+      - The LLM never needs to call transfer_to_agent (no prefix issue)
+      - The pipeline runs as sub_agent (real-time state streaming works)
+    """
+    target_location = callback_context.state.get("target_location", "")
+    business_type = callback_context.state.get("business_type", "")
+
+    # Only transfer if IntakeAgent has completed (state is populated)
+    # and pipeline hasn't started yet
+    if target_location and business_type:
+        pipeline_stage = callback_context.state.get("pipeline_stage", "")
+        if not pipeline_stage or pipeline_stage == "intake":
+            # Must return a fully mocked LlmResponse, which ADK expects
+            content = genai_types.Content(
+                parts=[
+                    genai_types.Part(
+                        function_call=genai_types.FunctionCall(
+                            name="transfer_to_agent",
+                            args={"agent_name": "LocationStrategyPipeline"}
+                        )
+                    )
+                ],
+                role="model",
+            )
+            return LlmResponse(
+                content=content,
+                finish_reason=genai_types.FinishReason.STOP,
+            )
+
+    return None
+
+
 # Root agent orchestrating the complete location strategy pipeline
 root_agent = Agent(
     model=FAST_MODEL,
@@ -87,16 +130,16 @@ root_agent = Agent(
 2. Check if the `TARGET_LOCATION` (Geographic area to analyze (e.g., "Park-Street, Kolkata")) and `BUSINESS_TYPE` (Type of business (e.g., "coffee shop", "bakery", "gym")) have been provided.
 3. If they are missing, or you are in doubt and you cannot parse or understand the `TARGET_LOCATION` or `BUSINESS_TYPE`, clearly **ask the user clarifying questions to get the required information.**
 4. Once you have the necessary details, call the `IntakeAgent` tool to process them.
-5. After the `IntakeAgent` is successful, delegate the full analysis to the `LocationStrategyPipeline` sub-agent by calling the `transfer_to_agent` tool with the argument `agent_name="LocationStrategyPipeline"`.
+5. After the `IntakeAgent` is successful, the analysis pipeline will start automatically.
 
 **CRITICAL TOOL USAGE INSTRUCTIONS:**
-- When calling the `IntakeAgent`, use the name EXACTLY as "IntakeAgent". 
-- **DO NOT** add prefixes like "default_api.IntakeAgent" or "functions.IntakeAgent".
-- **DO NOT** use "intake_agent" (lowercase). 
-- Correct Format: `IntakeAgent(target_location="...", business_type="...")
-- To transfer to the Location Strategy Pipeline, you MUST use the `transfer_to_agent` tool. DO NOT try to call `LocationStrategyPipeline` directly as a function.
+- When calling the `IntakeAgent`, use the name EXACTLY as "IntakeAgent".
+- DO NOT add prefixes like "default_api.IntakeAgent" or "functions.IntakeAgent".
+- Correct Format: `IntakeAgent(target_location="...", business_type="...")`
+- After IntakeAgent succeeds, the pipeline starts automatically. You do NOT need to call any other tool.
 
 Your main function is to manage this workflow conversationally.""",
-    tools = [AgentTool(intake_agent)], # Part 0: Parse user request
+    tools=[AgentTool(intake_agent)],
     sub_agents=[location_strategy_pipeline],
+    before_model_callback=_auto_transfer_callback,
 )
