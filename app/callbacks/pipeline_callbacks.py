@@ -386,13 +386,13 @@ async def after_strategy_advisor(callback_context: CallbackContext) -> Optional[
 
 
 def after_report_generator(callback_context: CallbackContext) -> Optional[types.Content]:
-    """Log completion of report generation.
+    """Log completion of report generation and force a final text emission.
 
-    Note: The artifact is now saved directly in the generate_html_report tool
-    using tool_context.save_artifact(). This callback just logs completion.
+    Note: The artifact is saved directly in the generate_html_report tool.
+    We return a final text block here to ensure the state delta (containing the large
+    HTML report string) is flushed to the frontend before the stream is closed
+    by ag_ui_adk's event translator.
     """
-    # The report_generation_result from output_key contains the LLM's text response,
-    # not the tool's return dict. The artifact is saved directly in the tool.
     logger.info("STAGE 4: COMPLETE - HTML report generation finished")
     logger.info("  (Artifact saved directly by generate_html_report tool)")
 
@@ -400,7 +400,13 @@ def after_report_generator(callback_context: CallbackContext) -> Optional[types.
     stages.append("report_generation")
     callback_context.state["stages_completed"] = stages
 
-    return None
+    # Return a final text block to force the event stream to flush the state delta.
+    # Without this, the event translator's `is_final_response` logic might close
+    # the stream before the massive HTML state delta is transmitted over the network.
+    return types.Content(
+        role="model",
+        parts=[types.Part.from_text("Report generated successfully. You can now view the interactive presentation below.")]
+    )
 
 
 def after_infographic_generator(callback_context: CallbackContext) -> Optional[types.Content]:
