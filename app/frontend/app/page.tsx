@@ -84,7 +84,7 @@ Provide your **business idea** and **geographic region clearly** and I will anal
 
 It usually takes about **3 minutes to 5 minutes** after confirmation of the location and business idea by Locus, for the **analysis to begin and generate the report**.
 
-⚠️ **IMPORTANT**: Once your query is confirmed, you can **close this sidebar** using the **X** button (top-right) to instantly view the **full-screen interactive report** updating live
+⚠️ **IMPORTANT**: Once your query is confirmed, If you are using a **mobile phone** or **edge device**, please **rotate your device to landscape mode** to catch the analysis optimally.
 `,
         }}
       >
