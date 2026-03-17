@@ -325,7 +325,7 @@ def _build_report_html(report: dict, business_type: str, target_location: str) -
 
   /* ── CTA BANNER — neon indigo ── */
   .cta-banner {{
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
     color: #fff; border-radius: 20px; padding: 3rem; text-align: center;
     box-shadow:
       0 10px 40px rgba(79,70,229,0.3),
@@ -574,7 +574,7 @@ def _build_report_html(report: dict, business_type: str, target_location: str) -
 
     <div class="cta-banner">
       <h3>This report provides a concise executive snapshot.</h3>
-      <p>For the complete interactive experience — including deep dives into granular Market Research with source-backed insights, live Competitor Mapping visualized on Google Maps, and Deep Gap Analysis powered by the Quantitative Leaderboard — return to the <strong>Locus App UI</strong>.</p>
+      <p>For the complete interactive experience including deep dives into granular Market Research with source-backed insights, live Competitor Mapping visualized on Google Maps and Deep Gap Analysis powered by the Quantitative Leaderboard, return to the <strong>Locus App UI</strong>.</p>
     </div>
   </div>
   <div class="slide-footer">LOCUS | A PRODUCT BY INTSEMBLE</div>
